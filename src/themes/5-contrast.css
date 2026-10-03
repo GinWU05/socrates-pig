@@ -1,0 +1,26 @@
+:root{
+  --bg:#0b0b0c; --bg-img:linear-gradient(#0b0b0c,#0b0b0c);
+  --ink:#ffffff; --ink-2:rgba(255,255,255,.84); --ink-3:rgba(255,255,255,.62);
+  --surface:#151517; --surface-2:#1b1b1e; --surface-hover:#232327;
+  --inset:#101012; --stroke:rgba(255,255,255,.14); --stroke-2:rgba(255,255,255,.34);
+  --shadow:none;
+  --acc:#d6ff3f; --acc-2:#d6ff3f; --acc-ink:#0b0b0c;
+  --btn-shadow:none; --shine:0;
+  --ghost-bg:transparent; --key-bg:rgba(255,255,255,.08);
+  --fill:#d6ff3f;
+  --grad-a:linear-gradient(90deg,#fff,#fff); --grad-b:linear-gradient(90deg,#d6ff3f,#d6ff3f);
+  --qSP:#d6ff3f; --qSH:#d6ff3f; --qPP:#d6ff3f; --qPH:#d6ff3f;
+  --cell-op:.05; --cell-cur-op:.22;
+  --dot:#d6ff3f; --dot-ink:#0b0b0c; --want-c:#ffffff; --want-ink:#0b0b0c; --wish-ink:#d6ff3f;
+  --radius:16px; --radius-sm:12px; --radius-btn:14px; --blur:0px;
+  --title-font:var(--sans);
+  --blob-op:0; --tint-op:0; --glow-op:.18; --grain:0;
+  --modal-bg:rgba(0,0,0,.86); --toast-bg:#d6ff3f; --focus:#d6ff3f;
+}
+.toast{color:#0b0b0c;font-weight:700}
+.title{font-weight:900;letter-spacing:0}
+.rtitle{letter-spacing:.01em}
+.mq .c::after{opacity:.12}
+.illu .disc{border-width:3px}
+.cell.cur{color:#fff}
+.btn{font-weight:800}

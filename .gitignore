@@ -1,0 +1,18 @@
+# 依赖
+node_modules/
+
+# 测试截图（npm test 生成；README 用图放在 docs/）
+shots/
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# 日志 / 临时
+npm-debug.log*
+*.log
+.env
+.env.*

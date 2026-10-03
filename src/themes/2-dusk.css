@@ -1,0 +1,17 @@
+:root{
+  --bg:#2a2631;
+  --bg-img:radial-gradient(50% 38% at 20% 10%, rgba(196,150,164,.20) 0%, transparent 70%),radial-gradient(50% 42% at 90% 60%, rgba(128,138,172,.20) 0%, transparent 70%),linear-gradient(172deg,#35303e,#2c2834 55%,#25232d);
+  --ink:#ede7ea; --ink-2:rgba(237,231,234,.74); --ink-3:rgba(237,231,234,.52);
+  --surface:rgba(255,255,255,.055); --surface-2:rgba(255,255,255,.04); --surface-hover:rgba(255,255,255,.085);
+  --inset:rgba(20,16,24,.22); --stroke:rgba(255,255,255,.10); --stroke-2:rgba(255,255,255,.19);
+  --shadow:0 18px 40px -26px rgba(10,6,16,.7);
+  --acc:#cfa6b4; --acc-2:#e2c3cd; --acc-ink:#2a1f26;
+  --btn-bg:linear-gradient(100deg,#d8b4c0,#c4a7bf); --shine:.18;
+  --grad-a:linear-gradient(90deg,#c9cbe2,#b6d0c7); --grad-b:linear-gradient(90deg,#e6c3ca,#e4d0b6);
+  --qSP:#8d93b8; --qSH:#8fb3a6; --qPP:#a8939f; --qPH:#d4a98c;
+  --dot:#f3ecef; --dot-ink:#2a1f26; --want-c:#e2c3cd; --want-ink:#2a1f26;
+  --radius:20px; --radius-sm:16px; --blur:12px;
+  --blob:#d9b6c2; --blob2:#9aa3c4; --blob-op:.08; --tint-op:.20; --glow-op:.4; --grain:.07;
+  --modal-bg:rgba(24,20,28,.8); --toast-bg:rgba(44,38,50,.95);
+}
+.title,.rtitle{letter-spacing:.04em}

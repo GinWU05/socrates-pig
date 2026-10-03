@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="{{THEME_COLOR}}">
+<!-- 固定配色：不跟随系统深色/浅色，阻止浏览器自动深色与 Dark Reader 等扩展改色 -->
+<meta name="color-scheme" content="only light">
+<meta name="supported-color-schemes" content="only light">
+<meta name="darkreader-lock">
+<meta name="format-detection" content="telephone=no">
+<title>你是痛苦的苏格拉底，还是快乐的猪？</title>
+<style>
+{{APP_CSS}}
+/* ===== theme: {{THEME_ID}} ===== */
+{{THEME_CSS}}
+</style>
+</head>
+<body data-theme="{{THEME_ID}}">
+<div class="bg" aria-hidden="true">
+  <div class="layer base"></div>
+  <div class="layer tint"></div>
+  <div class="blob"></div><div class="blob b2"></div>
+  <div class="grain"></div>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe3cf"/><stop offset="1" stop-color="#eec1a2"/></linearGradient>
+    <linearGradient id="beard" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f4f8"/><stop offset="1" stop-color="#c9cbe0"/></linearGradient>
+    <linearGradient id="pigSkin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd1df"/><stop offset="1" stop-color="#f4a3bf"/></linearGradient>
+    <linearGradient id="toga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8ecff"/><stop offset="1" stop-color="#aab4ff"/></linearGradient>
+  </defs>
+  <symbol id="soc-s" viewBox="0 0 120 120">
+    <path d="M22 118c4-22 20-32 38-32s34 10 38 32z" fill="url(#toga)"/>
+    <path d="M44 92c8 10 24 10 32 0" stroke="#8d97e8" stroke-width="2" fill="none" opacity=".6"/>
+    <ellipse cx="60" cy="54" rx="29" ry="32" fill="url(#skin)"/>
+    <ellipse cx="31" cy="58" rx="5" ry="8" fill="#eec1a2"/><ellipse cx="89" cy="58" rx="5" ry="8" fill="#eec1a2"/>
+    <path d="M33 42c2-7 6-10 9-11M87 42c-2-7-6-10-9-11" stroke="#d9dbe9" stroke-width="5" stroke-linecap="round"/>
+    <ellipse cx="52" cy="26" rx="12" ry="5" fill="#fff" opacity=".45"/>
+    <path d="M44 50l10-4M76 50l-10-4" stroke="#6b5246" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="50" cy="57" r="3" fill="#3a2b25"/><circle cx="70" cy="57" r="3" fill="#3a2b25"/>
+    <path d="M55 37q5-3 10 0M53 41q7-3 14 0" stroke="#d29b7c" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M30 64c0 26 14 40 30 40s30-14 30-40c-6 6-14 8-20 6-4 4-16 4-20 0-6 2-14 0-20-6z" fill="url(#beard)"/>
+    <path d="M54 76q6-4 12 0" stroke="#9b8478" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M60 58l-4 10h8z" fill="#e3ae8e"/>
+    <path d="M90 36q4 6 0 9q-4-3 0-9z" fill="#9fd3ff"/>
+    <g fill="#7fe0c4"><ellipse cx="34" cy="34" rx="6" ry="3" transform="rotate(-40 34 34)"/><ellipse cx="42" cy="26" rx="6" ry="3" transform="rotate(-20 42 26)"/><ellipse cx="86" cy="34" rx="6" ry="3" transform="rotate(40 86 34)"/><ellipse cx="78" cy="26" rx="6" ry="3" transform="rotate(20 78 26)"/></g>
+    <text x="96" y="22" font-size="18" font-weight="800" fill="#c9cfe8" font-family="Georgia,serif">?</text>
+  </symbol>
+  <symbol id="soc-h" viewBox="0 0 120 120">
+    <path d="M22 118c4-22 20-32 38-32s34 10 38 32z" fill="url(#toga)"/>
+    <path d="M44 92c8 10 24 10 32 0" stroke="#8d97e8" stroke-width="2" fill="none" opacity=".6"/>
+    <ellipse cx="60" cy="54" rx="29" ry="32" fill="url(#skin)"/>
+    <ellipse cx="31" cy="58" rx="5" ry="8" fill="#eec1a2"/><ellipse cx="89" cy="58" rx="5" ry="8" fill="#eec1a2"/>
+    <path d="M33 42c2-7 6-10 9-11M87 42c-2-7-6-10-9-11" stroke="#d9dbe9" stroke-width="5" stroke-linecap="round"/>
+    <ellipse cx="52" cy="26" rx="12" ry="5" fill="#fff" opacity=".45"/>
+    <path d="M44 47q5-3 10 0M66 47q5-3 10 0" stroke="#6b5246" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M46 58q4-4 8 0M66 58q4-4 8 0" stroke="#3a2b25" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+    <ellipse cx="41" cy="64" rx="5" ry="3" fill="#ff9fa8" opacity=".5"/><ellipse cx="79" cy="64" rx="5" ry="3" fill="#ff9fa8" opacity=".5"/>
+    <path d="M30 64c0 26 14 40 30 40s30-14 30-40c-6 6-14 8-20 6-4 4-16 4-20 0-6 2-14 0-20-6z" fill="url(#beard)"/>
+    <path d="M52 72q8 7 16 0" stroke="#9b8478" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <path d="M60 58l-4 10h8z" fill="#e3ae8e"/>
+    <g fill="#7fe0c4"><ellipse cx="34" cy="34" rx="6" ry="3" transform="rotate(-40 34 34)"/><ellipse cx="42" cy="26" rx="6" ry="3" transform="rotate(-20 42 26)"/><ellipse cx="86" cy="34" rx="6" ry="3" transform="rotate(40 86 34)"/><ellipse cx="78" cy="26" rx="6" ry="3" transform="rotate(20 78 26)"/></g>
+    <path d="M100 8l2.4 6 6 2.4-6 2.4-2.4 6-2.4-6-6-2.4 6-2.4z" fill="#ffd79a"/>
+    <text x="88" y="30" font-size="13" font-weight="800" fill="#fff" font-family="Georgia,serif">?</text>
+  </symbol>
+  <symbol id="pig-h" viewBox="0 0 120 120">
+    <path d="M26 30l-4-20 22 12zM94 30l4-20-22 12z" fill="#f48fb1"/>
+    <path d="M28 27l-2-11 11 7zM92 27l2-11-11 7z" fill="#ffc6d8"/>
+    <ellipse cx="60" cy="62" rx="44" ry="42" fill="url(#pigSkin)"/>
+    <ellipse cx="46" cy="30" rx="14" ry="6" fill="#fff" opacity=".4"/>
+    <path d="M38 52q6-6 12 0M70 52q6-6 12 0" stroke="#5b2a3a" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+    <ellipse cx="32" cy="70" rx="8" ry="5" fill="#ff6f9a" opacity=".45"/><ellipse cx="88" cy="70" rx="8" ry="5" fill="#ff6f9a" opacity=".45"/>
+    <ellipse cx="60" cy="74" rx="18" ry="13" fill="#f48fb1"/>
+    <ellipse cx="53" cy="74" rx="3.5" ry="5" fill="#b8466b"/><ellipse cx="67" cy="74" rx="3.5" ry="5" fill="#b8466b"/>
+    <path d="M48 92q12 8 24 0" stroke="#5b2a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <g fill="#ffd79a"><path d="M98 18l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><circle cx="16" cy="44" r="2.5"/></g>
+  </symbol>
+  <symbol id="pig-s" viewBox="0 0 120 120">
+    <path d="M24 34l-8-18 24 10zM96 34l8-18-24 10z" fill="#e88aac"/>
+    <path d="M25 30l-5-10 12 6zM95 30l5-10-12 6z" fill="#f6bfd1"/>
+    <ellipse cx="60" cy="62" rx="44" ry="42" fill="url(#pigSkin)"/>
+    <ellipse cx="46" cy="30" rx="14" ry="6" fill="#fff" opacity=".35"/>
+    <path d="M36 48l12-4M84 48l-12-4" stroke="#5b2a3a" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="44" cy="56" r="3.6" fill="#5b2a3a"/><circle cx="76" cy="56" r="3.6" fill="#5b2a3a"/>
+    <path d="M42 62q3 5 0 8q-3-3 0-8z" fill="#9fd3ff"/>
+    <ellipse cx="60" cy="76" rx="18" ry="13" fill="#e88aac"/>
+    <ellipse cx="53" cy="76" rx="3.5" ry="5" fill="#a9405f"/><ellipse cx="67" cy="76" rx="3.5" ry="5" fill="#a9405f"/>
+    <path d="M50 97q10-7 20 0" stroke="#5b2a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <g fill="#c9cfe0"><circle cx="99" cy="15" r="6"/><circle cx="107" cy="18" r="5"/><circle cx="92" cy="18" r="4.5"/><rect x="92" y="16" width="16" height="7" rx="3.5"/></g>
+    <path d="M97 27q2 3 0 5q-2-2 0-5zM104 27q2 3 0 5q-2-2 0-5z" fill="#9fd3ff"/>
+  </symbol>
+</svg>
+
+<main class="app">
+  <!-- Cover -->
+  <section class="screen cover active" id="cover" aria-labelledby="t1">
+    <div class="eyebrow">⚖️ 一个关于思考与快乐的小测验</div>
+    <div class="duo" aria-hidden="true">
+      <svg class="avatar l"><use href="#soc-s"/></svg>
+      <span class="vs">or</span>
+      <svg class="avatar r"><use href="#pig-h"/></svg>
+    </div>
+    <h1 class="title" id="t1">你是<span class="a">痛苦的苏格拉底</span>，<br>还是<span class="b">快乐的猪</span>？</h1>
+    <figure class="quote card">
+      <p>做一个不满足的人，胜过做一只满足的猪；做一个不满足的苏格拉底，胜过做一个满足的傻瓜。</p>
+      <cite>—— 约翰·斯图尔特·密尔《功利主义》，1863</cite>
+    </figure>
+    <p class="intro">密尔只给了两个选项。可现实里还有<b>快乐的苏格拉底</b>和<b>痛苦的猪</b>。两条轴：你更爱追问还是更爱享受，你真实地过得快乐还是辛苦。凭第一直觉选就好。</p>
+    <div class="cta">
+      <button class="btn" id="startBtn">开始测试 · 完整版
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+      <button class="btn ghost" id="speedBtn">⚡ 速通版 · 两题自评</button>
+    </div>
+    <div class="meta"><span>⏱ 约 3 分钟</span><span>🧩 <i id="metaCount">14</i> 题</span><span>🔒 不收集任何数据</span></div>
+  </section>
+
+  <!-- Quiz -->
+  <section class="screen quiz" id="quiz" aria-live="polite">
+    <div class="topbar">
+      <button class="iconbtn" id="backBtn" aria-label="返回首页">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="progress">
+        <div class="label"><span id="qMode">完整版</span><span>第 <b id="qNum">1</b> / <span id="qTotal">14</span> 题</span></div>
+        <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="track"><div class="fill" id="fill"></div></div>
+      </div>
+      <div class="mq" id="mq" aria-hidden="true" title="你此刻的位置"><i class="c SH"></i><i class="c PH"></i><i class="c SP"></i><i class="c PP"></i><b class="d" id="mqDot"></b></div>
+      <button class="iconbtn home" id="quizHomeBtn" aria-label="回到首页" title="回到首页">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5L12 4l8.5 6.5"/><path d="M6 9v10.5h4.5V14h3v5.5H18V9"/></svg>
+      </button>
+    </div>
+    <div class="stage" id="stage"></div>
+    <p class="hint" id="qHint">没有标准答案，凭第一直觉选 · 可随时返回上一题</p>
+  </section>
+
+  <!-- Result -->
+  <section class="screen result" id="result" aria-live="polite">
+    <div class="rcard card reveal" id="rcard">
+      <div class="kicker" id="rKicker">你 的 测 试 结 果</div>
+      <div class="illu" id="illu"></div>
+      <h2 class="rtitle" id="rTitle"></h2>
+      <p class="rsub" id="rSub"></p>
+      <p class="wish" id="rWish"></p>
+      <div class="qchart" id="qchart">
+        <div class="chead">
+          <span class="ctitle">维度图</span>
+          <div class="ctabs" id="ctabs" role="tablist" aria-label="图表视图">
+            <button class="ctab on" data-v="quad" role="tab" aria-selected="true">象限</button><button class="ctab" data-v="radar" role="tab" aria-selected="false">雷达</button>
+          </div>
+        </div>
+        <div class="cbox" id="cbox"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <p class="scores" id="rScores"></p>
+      <p class="rdesc" id="rDesc"></p>
+      <div class="tags" id="rTags"></div>
+    </div>
+    <div class="tips card" id="tips">
+      <div class="tipshead"><span class="tipsico" aria-hidden="true">🧭</span><h3 id="tipsTitle"></h3></div>
+      <p class="tipssub" id="tipsSub"></p>
+      <ol class="tipslist" id="tipsList"></ol>
+    </div>
+    <div class="actions">
+      <button class="btn" id="shareBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>生成结果图</button>
+      <button class="btn ghost" id="fullBtn" hidden>📝 做完整版（14 题）</button>
+      <button class="btn ghost" id="retryBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span id="retryTxt">再测一次</span></button>
+      <button class="linkbtn" id="homeBtn">回到首页</button>
+    </div>
+    <p class="note">密尔说，宁做不满足的人。可他也说过：问自己是否幸福，幸福便不再。<br>——别太较真，你本来就值得被喜欢。</p>
+  </section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+<div class="confirm" id="confirm" role="alertdialog" aria-modal="true" aria-labelledby="cfT" aria-describedby="cfD">
+  <div class="cfcard card">
+    <h3 id="cfT">要回到首页吗？</h3>
+    <p id="cfD">退出后本次答题进度会丢失。</p>
+    <div class="cfrow"><button class="btn ghost" id="cfExit">退出</button><button class="btn" id="cfStay">继续答题</button></div>
+  </div>
+</div>
+<div class="modal" id="shareModal" role="dialog" aria-modal="true" aria-label="结果图">
+  <button class="iconbtn close" id="closeShare" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <div class="sheet">
+    <div class="posterbox"><img class="poster loading" id="posterImg" alt="测试结果图"></div>
+    <p class="tip" id="shareTip">长按图片可保存到相册，或直接发送给朋友</p>
+    <div class="row">
+      <a class="btn" id="saveBtn" download="苏格拉底还是猪-测试结果.png" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>保存图片</a>
+    </div>
+  </div>
+</div>
+<script>
+window.POSTER_THEME = {{POSTER_JSON}};
+{{CHART_JS}}
+{{APP_JS}}
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+:root{
+  --bg:#17142a;
+  --bg-img:radial-gradient(45% 35% at 18% 12%, rgba(130,110,225,.26) 0%, transparent 70%),radial-gradient(45% 40% at 88% 40%, rgba(96,124,205,.17) 0%, transparent 70%),radial-gradient(55% 45% at 40% 95%, rgba(156,104,198,.19) 0%, transparent 70%),linear-gradient(165deg,#1b1731,#1f1a38 55%,#161a2e);
+  --ink:#ebe8f5; --ink-2:rgba(235,232,245,.74); --ink-3:rgba(235,232,245,.56);
+  --surface:rgba(255,255,255,.05); --surface-2:rgba(255,255,255,.04); --surface-hover:rgba(255,255,255,.08);
+  --inset:rgba(0,0,0,.22); --stroke:rgba(255,255,255,.09); --stroke-2:rgba(255,255,255,.17);
+  --acc:#a99bff; --acc-2:#c9bfff; --acc-ink:#15102b;
+  --grad-a:linear-gradient(90deg,#c3bdff,#a3d4cd); --grad-b:linear-gradient(90deg,#e7b9cb,#e6cba4);
+  --qSP:#7d86e8; --qSH:#5fbfae; --qPP:#9a86a8; --qPH:#e0a07c;
+  --dot:#f2efff; --dot-ink:#15102b; --want-c:#c9bfff; --want-ink:#15102b;
+  --blob:#8b7bff; --blob2:#5d6bb8; --blob-op:.10; --tint-op:.22; --glow-op:.45;
+}

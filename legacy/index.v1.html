@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2a1f4e">
+<meta name="format-detection" content="telephone=no">
+<title>你是痛苦的苏格拉底，还是快乐的猪？</title>
+<style>
+:root{
+  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Helvetica Neue", Arial, sans-serif;
+  --serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", Georgia, serif;
+  --soc: #6d7cff;
+  --soc2: #3fd0c9;
+  --pig: #ff7aa8;
+  --pig2: #ffc46b;
+  --ink: #fff;
+  --ink-2: rgba(255,255,255,.78);
+  --ink-3: rgba(255,255,255,.55);
+  --glass: rgba(255,255,255,.12);
+  --glass-2: rgba(255,255,255,.18);
+  --stroke: rgba(255,255,255,.28);
+  --radius: 24px;
+  --ease: cubic-bezier(.22,1,.36,1);
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{overflow-x:hidden}
+body{overflow-x:hidden}
+body{
+  font-family:var(--sans);color:var(--ink);background:#1b1535;
+  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;
+  min-height:100vh;min-height:100dvh;
+}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+
+/* ---------- Animated background (3 crossfading layers) ---------- */
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:#1b1535}
+.bg .layer{position:absolute;inset:-20%;opacity:0;transition:opacity 1.6s var(--ease);
+  background-size:200% 200%;animation:drift 18s ease-in-out infinite alternate}
+.bg .neutral{opacity:1;background-image:
+  radial-gradient(40% 35% at 20% 25%, #7b5cff 0%, transparent 70%),
+  radial-gradient(45% 40% at 80% 30%, #ff6fa5 0%, transparent 70%),
+  radial-gradient(50% 45% at 60% 85%, #3fb6ff 0%, transparent 70%),
+  linear-gradient(160deg,#2a1f5c,#3b1d4f 50%,#15284d)}
+.bg .soc{background-image:
+  radial-gradient(40% 35% at 25% 20%, #5d6bff 0%, transparent 70%),
+  radial-gradient(45% 40% at 85% 45%, #2fc6c0 0%, transparent 70%),
+  radial-gradient(50% 45% at 30% 90%, #8a5cff 0%, transparent 70%),
+  linear-gradient(160deg,#101a46,#1c1f5e 50%,#0b2f45)}
+.bg .pig{background-image:
+  radial-gradient(40% 35% at 20% 25%, #ff7aa8 0%, transparent 70%),
+  radial-gradient(45% 40% at 85% 35%, #ffb36b 0%, transparent 70%),
+  radial-gradient(50% 45% at 50% 90%, #ff5f7e 0%, transparent 70%),
+  linear-gradient(160deg,#5a2142,#7a3049 50%,#5b3a2a)}
+.bg .blob{position:absolute;width:60vmax;height:60vmax;border-radius:50%;filter:blur(60px);opacity:.35;
+  background:radial-gradient(circle,#fff 0%,transparent 60%);mix-blend-mode:overlay;animation:float 22s ease-in-out infinite}
+.bg .blob.b2{animation-duration:28s;animation-direction:reverse;left:40%;top:50%}
+.bg .grain{position:absolute;inset:0;opacity:.08;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+@keyframes drift{0%{transform:translate3d(-4%,-3%,0) rotate(0deg) scale(1)}100%{transform:translate3d(4%,3%,0) rotate(8deg) scale(1.08)}}
+@keyframes float{0%,100%{transform:translate(-20%,-20%)}50%{transform:translate(10%,15%)}}
+
+/* ---------- App shell ---------- */
+.app{position:relative;z-index:1;max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;
+  padding:calc(16px + var(--sat)) calc(18px + var(--sar)) calc(20px + var(--sab)) calc(18px + var(--sal));
+  display:grid}
+.screen{grid-area:1/1;display:flex;flex-direction:column;min-height:100%;
+  opacity:0;visibility:hidden;transform:translateY(18px) scale(.985);
+  transition:opacity .55s var(--ease),transform .65s var(--ease),visibility 0s linear .65s}
+.screen.active{opacity:1;visibility:visible;transform:none;transition:opacity .55s var(--ease) .08s,transform .65s var(--ease) .08s,visibility 0s}
+.screen.leave{opacity:0;transform:translateY(-14px) scale(.985)}
+
+.card{background:linear-gradient(145deg,rgba(255,255,255,.18),rgba(255,255,255,.07));
+  border:1px solid var(--stroke);border-radius:var(--radius);
+  backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);
+  box-shadow:0 20px 50px -20px rgba(10,5,40,.55), inset 0 1px 0 rgba(255,255,255,.35)}
+
+/* ---------- Cover ---------- */
+.cover{justify-content:center;gap:18px;text-align:center}
+.cover .eyebrow{display:inline-flex;align-self:center;align-items:center;gap:8px;font-size:12px;letter-spacing:.18em;color:var(--ink-2);
+  padding:7px 14px;border-radius:99px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2)}
+.duo{display:flex;justify-content:center;align-items:flex-end;gap:6px;margin:6px 0 2px;height:150px}
+.duo .avatar{width:118px;height:118px;filter:drop-shadow(0 14px 22px rgba(0,0,0,.3))}
+.duo .avatar.l{animation:bob 4.5s ease-in-out infinite}
+.duo .avatar.r{animation:bob 4.5s ease-in-out -2.25s infinite}
+.duo .vs{font-family:var(--serif);font-style:italic;font-size:22px;color:var(--ink-3);margin:0 2px 46px}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-10px) rotate(2deg)}}
+.title{font-family:var(--serif);font-weight:900;font-size:clamp(30px,8.6vw,40px);line-height:1.22;letter-spacing:.02em;
+  text-shadow:0 4px 24px rgba(30,10,80,.35)}
+.title .a{background:linear-gradient(90deg,#c9d2ff,#8ff0e6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.title .b{background:linear-gradient(90deg,#ffc0d6,#ffd79a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.quote{padding:20px 20px 18px;text-align:left;position:relative}
+.quote::before{content:"“";position:absolute;top:-14px;left:14px;font-family:Georgia,serif;font-size:72px;line-height:1;color:rgba(255,255,255,.35)}
+.quote p{font-family:var(--serif);font-size:15.5px;line-height:1.85;color:var(--ink)}
+.quote cite{display:block;margin-top:10px;font-style:normal;font-size:12.5px;color:var(--ink-3)}
+.intro{font-size:14px;line-height:1.8;color:var(--ink-2);padding:0 6px}
+.meta{display:flex;justify-content:center;gap:18px;font-size:12.5px;color:var(--ink-3)}
+.meta span{display:inline-flex;align-items:center;gap:6px}
+
+.btn{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;padding:0 24px;
+  border-radius:99px;font-size:17px;font-weight:700;letter-spacing:.06em;color:#24123f;
+  background:linear-gradient(100deg,#fff 0%,#f3eaff 50%,#ffe9f1 100%);
+  box-shadow:0 14px 34px -12px rgba(0,0,0,.45),inset 0 -2px 0 rgba(0,0,0,.06);
+  transition:transform .25s var(--ease),box-shadow .25s var(--ease);overflow:hidden}
+.btn::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.9) 50%,transparent 70%);
+  transform:translateX(-120%);animation:shine 3.6s ease-in-out 1.2s infinite}
+@keyframes shine{0%{transform:translateX(-120%)}35%,100%{transform:translateX(120%)}}
+.btn:hover{transform:translateY(-2px);box-shadow:0 18px 40px -12px rgba(0,0,0,.5)}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid var(--stroke);box-shadow:none}
+.btn.ghost::after{display:none}
+.btn svg{width:20px;height:20px;flex:none}
+a.btn{text-decoration:none}
+.btn[hidden]{display:none}
+
+/* ---------- Quiz ---------- */
+.quiz{gap:16px}
+.topbar{display:flex;align-items:center;gap:12px;min-height:44px}
+.iconbtn{width:44px;height:44px;flex:none;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.2);transition:transform .2s var(--ease),opacity .3s,background .2s}
+.iconbtn:active{transform:scale(.9)}
+.iconbtn[disabled]{opacity:.3;pointer-events:none}
+.iconbtn svg{width:20px;height:20px}
+.progress{flex:1;display:flex;flex-direction:column;gap:7px}
+.progress .label{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.progress .label b{color:#fff;font-weight:700}
+.track{height:8px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden;position:relative}
+.fill{position:absolute;inset:0 auto 0 0;width:0;border-radius:inherit;
+  background:linear-gradient(90deg,#8ff0e6,#c9b6ff,#ffb3cf,#ffd79a);background-size:200% 100%;
+  transition:width .7s var(--ease);animation:flow 4s linear infinite;box-shadow:0 0 14px rgba(255,255,255,.5)}
+@keyframes flow{to{background-position:-200% 0}}
+
+.lean{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--ink-3);padding:0 4px}
+.lean .mini{flex:1;height:4px;border-radius:99px;background:linear-gradient(90deg,rgba(143,240,230,.55),rgba(255,255,255,.2),rgba(255,179,207,.55));position:relative}
+.lean .dot{position:absolute;top:50%;left:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#fff;
+  box-shadow:0 0 0 4px rgba(255,255,255,.18);transition:left .8s var(--ease)}
+
+.stage{position:relative;flex:1;display:grid}
+.qcard{grid-area:1/1;padding:24px 18px 18px;display:flex;flex-direction:column;gap:18px;align-self:start}
+.qcard.in{animation:qin .55s var(--ease) both}
+.qcard.out{animation:qout .35s var(--ease) both;pointer-events:none}
+.qcard.in.back{animation-name:qinb}
+.qcard.out.back{animation-name:qoutb}
+@keyframes qin{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+@keyframes qout{to{opacity:0;transform:translateX(-40px)}}
+@keyframes qinb{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
+@keyframes qoutb{to{opacity:0;transform:translateX(40px)}}
+.qhead{display:flex;flex-direction:column;gap:10px;padding:0 4px}
+.qtag{display:inline-flex;align-self:flex-start;align-items:center;gap:6px;font-size:12px;letter-spacing:.12em;color:var(--ink-2);
+  padding:5px 11px;border-radius:99px;background:rgba(255,255,255,.12)}
+.qtext{font-size:20px;line-height:1.6;font-weight:700;letter-spacing:.01em}
+.opts{display:flex;flex-direction:column;gap:11px;list-style:none}
+.opt{position:relative;width:100%;text-align:left;display:flex;align-items:center;gap:13px;min-height:62px;padding:14px 16px;
+  border-radius:18px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  font-size:15.5px;line-height:1.55;color:#fff;
+  transition:transform .22s var(--ease),background .22s,border-color .22s,box-shadow .22s;overflow:hidden;
+  opacity:0;animation:optin .5s var(--ease) both}
+.opt:nth-child(1){animation-delay:.08s}.opt:nth-child(2){animation-delay:.14s}.opt:nth-child(3){animation-delay:.2s}.opt:nth-child(4){animation-delay:.26s}
+@keyframes optin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.opt .key{flex:none;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:13px;font-weight:800;
+  background:rgba(255,255,255,.16);color:var(--ink-2);transition:background .22s,color .22s,transform .3s var(--ease)}
+.opt .txt{flex:1}
+@media (hover:hover){
+  .opt:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.45);transform:translateY(-2px);box-shadow:0 10px 24px -14px rgba(0,0,0,.5)}
+  .opt:hover .key{background:#fff;color:#2a1a4d}
+}
+.opt:active{transform:scale(.98)}
+.opt .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.45);transform:scale(0);animation:ripple .6s ease-out forwards;pointer-events:none}
+@keyframes ripple{to{transform:scale(4);opacity:0}}
+.opt.picked{background:rgba(255,255,255,.92);color:#24123f;border-color:#fff;box-shadow:0 12px 30px -12px rgba(0,0,0,.45)}
+.opt.picked .key{background:linear-gradient(135deg,#7c8bff,#ff8fb6);color:#fff;transform:rotate(-8deg) scale(1.08)}
+.opt.dim{opacity:.45 !important;transform:scale(.985)}
+.opt:focus-visible,.btn:focus-visible,.iconbtn:focus-visible{outline:3px solid #fff;outline-offset:3px}
+
+/* ---------- Result ---------- */
+.result{gap:16px;padding-bottom:6px}
+.rcard{padding:26px 20px 22px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:14px;overflow:hidden;position:relative}
+.rcard .kicker{font-size:12px;letter-spacing:.24em;color:var(--ink-3)}
+.illu{position:relative;width:150px;height:150px;display:grid;place-items:center}
+.illu .halo{position:absolute;inset:-10px;border-radius:50%;
+  background:conic-gradient(from 0deg,var(--h1),var(--h2),var(--h1));filter:blur(20px);opacity:.75;animation:spin 8s linear infinite}
+.illu .disc{position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35)}
+.illu svg.avatar{position:relative;width:118px;height:118px}
+.illu .ring{position:absolute;inset:-12px;width:calc(100% + 24px);height:calc(100% + 24px);transform:rotate(-90deg)}
+.illu .ring circle{fill:none;stroke-width:7;stroke-linecap:round}
+.illu .ring .arc{transition:stroke-dashoffset 1.6s var(--ease)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.reveal>*{opacity:0;transform:translateY(14px)}
+.result.active .reveal>*{animation:rev .7s var(--ease) forwards}
+.result.active .reveal>*:nth-child(1){animation-delay:.15s}
+.result.active .reveal>*:nth-child(2){animation-delay:.35s;animation-name:pop}
+.result.active .reveal>*:nth-child(3){animation-delay:1.0s}
+.result.active .reveal>*:nth-child(4){animation-delay:1.15s}
+.result.active .reveal>*:nth-child(5){animation-delay:1.3s}
+.result.active .reveal>*:nth-child(6){animation-delay:1.45s}
+.result.active .reveal>*:nth-child(7){animation-delay:1.6s}
+@keyframes rev{to{opacity:1;transform:none}}
+@keyframes pop{0%{opacity:0;transform:scale(.4) rotate(-12deg)}60%{opacity:1;transform:scale(1.08) rotate(3deg)}100%{opacity:1;transform:none}}
+.rtitle{font-family:var(--serif);font-weight:900;font-size:clamp(28px,8vw,34px);line-height:1.25;letter-spacing:.03em}
+.rsub{font-size:13.5px;color:var(--ink-2);margin-top:-6px}
+.rdesc{font-size:15px;line-height:1.9;color:var(--ink);text-align:left;text-wrap:pretty}
+.tags{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.tags span{font-size:12.5px;padding:6px 12px;border-radius:99px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22)}
+
+.meter{width:100%;padding:16px 16px 14px;border-radius:18px;background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.14)}
+.meter .ends{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}
+.meter .end{display:flex;flex-direction:column;gap:2px;text-align:left}
+.meter .end.r{text-align:right}
+.meter .end small{font-size:11.5px;color:var(--ink-3)}
+.meter .end b{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;color:#fff}
+.meter .end small{display:inline-flex;align-items:center;gap:6px}
+.meter .end small::before{content:"";width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#5d6bff,#3fd0c9)}
+.meter .end.r small{flex-direction:row-reverse}
+.meter .end.r small::before{background:linear-gradient(135deg,#ffb36b,#ff7aa8)}
+.meter .end.r{align-items:flex-end}
+.bar{position:relative;height:14px;border-radius:99px;background:rgba(255,255,255,.12);overflow:visible}
+.bar{background:linear-gradient(90deg,#5d6bff,#3fd0c9 30%,#b9a6ff 50%,#ffb36b 70%,#ff7aa8)}
+.bar::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 1px 2px rgba(0,0,0,.25)}
+.bar .tick{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:rgba(255,255,255,.45);border-radius:2px}
+.bar .knob{position:absolute;z-index:1;top:50%;left:calc((100% - 34px) * .5);width:34px;height:34px;margin-top:-17px;border-radius:50%;background:#fff;
+  display:grid;place-items:center;font-size:17px;box-shadow:0 6px 16px rgba(0,0,0,.35),0 0 0 5px rgba(255,255,255,.22);
+  transition:left 1.6s var(--ease)}
+.bar .knob::before{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid rgba(255,255,255,.6);animation:pulse 2s ease-out infinite}
+@keyframes pulse{from{transform:scale(1);opacity:.9}to{transform:scale(1.6);opacity:0}}
+.scale{display:flex;justify-content:space-between;margin-top:16px;font-size:11px;color:var(--ink-2)}
+
+.hint{font-size:12px;color:var(--ink-3);text-align:center;letter-spacing:.04em}
+.note{font-size:12.5px;line-height:1.75;color:var(--ink-3);text-align:center;padding:0 10px}
+.actions{display:flex;flex-direction:column;gap:10px}
+.toast{position:fixed;left:50%;bottom:calc(28px + var(--sab));transform:translate(-50%,20px);opacity:0;z-index:5;
+  padding:10px 18px;border-radius:99px;background:rgba(20,10,40,.8);font-size:13.5px;transition:all .35s var(--ease);pointer-events:none;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* share modal */
+.modal{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(20px + var(--sab)) calc(20px + var(--sal));
+  background:rgba(8,5,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  opacity:0;visibility:hidden;transition:opacity .35s var(--ease),visibility 0s linear .35s}
+.modal.open{opacity:1;visibility:visible;transition:opacity .35s var(--ease),visibility 0s}
+.modal .sheet{width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px;transform:translateY(24px) scale(.97);transition:transform .45s var(--ease)}
+.modal.open .sheet{transform:none}
+.modal .poster{align-self:center;width:auto;max-width:100%;max-height:calc(100vh - 220px);max-height:calc(100dvh - 220px);border-radius:18px;box-shadow:0 30px 60px -20px rgba(0,0,0,.6);
+  background:rgba(255,255,255,.06);-webkit-touch-callout:default;user-select:auto}
+.modal .poster.loading{width:100%;aspect-ratio:1080/1500;animation:shimmer 1.2s ease-in-out infinite alternate}
+@keyframes shimmer{from{opacity:.4}to{opacity:.8}}
+.modal .tip{font-size:13px;color:rgba(255,255,255,.75);text-align:center}
+.modal .row{display:flex;gap:10px}
+.modal .row .btn{min-height:52px;font-size:15.5px}
+.modal .close{position:absolute;top:calc(14px + var(--sat));right:calc(14px + var(--sar));}
+
+/* tiny confetti for result */
+.spark{position:absolute;width:8px;height:8px;border-radius:2px;top:40%;left:50%;opacity:0;pointer-events:none;animation:spark 1.4s var(--ease) forwards}
+@keyframes spark{0%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r))}}
+
+@media (max-height:700px){
+  .duo{height:120px}.duo .avatar{width:96px;height:96px}
+  .qtext{font-size:18.5px}.opt{min-height:56px;padding:12px 14px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;animation-delay:0s !important;transition-duration:.001ms !important;transition-delay:0s !important;scroll-behavior:auto !important}
+  .bg .layer{transition:opacity .001ms}
+  .spark{display:none}
+}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true">
+  <div class="layer neutral"></div>
+  <div class="layer soc" id="bgSoc"></div>
+  <div class="layer pig" id="bgPig"></div>
+  <div class="blob"></div><div class="blob b2"></div>
+  <div class="grain"></div>
+</div>
+
+<!-- SVG symbols -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe3cf"/><stop offset="1" stop-color="#eec1a2"/></linearGradient>
+    <linearGradient id="beard" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f4f8"/><stop offset="1" stop-color="#c9cbe0"/></linearGradient>
+    <linearGradient id="pigSkin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd1df"/><stop offset="1" stop-color="#ff9fbf"/></linearGradient>
+    <linearGradient id="toga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8ecff"/><stop offset="1" stop-color="#aab4ff"/></linearGradient>
+  </defs>
+  <symbol id="socrates" viewBox="0 0 120 120">
+    <path d="M22 118c4-22 20-32 38-32s34 10 38 32z" fill="url(#toga)"/>
+    <path d="M44 92c8 10 24 10 32 0" stroke="#8d97e8" stroke-width="2" fill="none" opacity=".6"/>
+    <ellipse cx="60" cy="54" rx="29" ry="32" fill="url(#skin)"/>
+    <ellipse cx="31" cy="58" rx="5" ry="8" fill="#eec1a2"/><ellipse cx="89" cy="58" rx="5" ry="8" fill="#eec1a2"/>
+    <path d="M33 42c2-7 6-10 9-11M87 42c-2-7-6-10-9-11" stroke="#d9dbe9" stroke-width="5" stroke-linecap="round"/>
+    <ellipse cx="52" cy="26" rx="12" ry="5" fill="#fff" opacity=".45"/>
+    <path d="M44 47l10 3M76 47l-10 3" stroke="#6b5246" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="50" cy="56" r="3" fill="#3a2b25"/><circle cx="70" cy="56" r="3" fill="#3a2b25"/>
+    <path d="M55 37q5-3 10 0" stroke="#d29b7c" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M30 64c0 26 14 40 30 40s30-14 30-40c-6 6-14 8-20 6-4 4-16 4-20 0-6 2-14 0-20-6z" fill="url(#beard)"/>
+    <path d="M54 72q6 3 12 0" stroke="#9b8478" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M60 58l-4 10h8z" fill="#e3ae8e"/>
+    <g fill="#7fe0c4"><ellipse cx="34" cy="34" rx="6" ry="3" transform="rotate(-40 34 34)"/><ellipse cx="42" cy="26" rx="6" ry="3" transform="rotate(-20 42 26)"/><ellipse cx="86" cy="34" rx="6" ry="3" transform="rotate(40 86 34)"/><ellipse cx="78" cy="26" rx="6" ry="3" transform="rotate(20 78 26)"/></g>
+    <text x="95" y="22" font-size="18" font-weight="800" fill="#fff" font-family="Georgia,serif">?</text>
+  </symbol>
+  <symbol id="pig" viewBox="0 0 120 120">
+    <path d="M26 30l-4-20 22 12zM94 30l4-20-22 12z" fill="#ff8fb3"/>
+    <path d="M28 27l-2-11 11 7zM92 27l2-11-11 7z" fill="#ffc6d8"/>
+    <ellipse cx="60" cy="62" rx="44" ry="42" fill="url(#pigSkin)"/>
+    <ellipse cx="46" cy="30" rx="14" ry="6" fill="#fff" opacity=".4"/>
+    <path d="M38 52q6-6 12 0M70 52q6-6 12 0" stroke="#5b2a3a" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+    <ellipse cx="32" cy="70" rx="8" ry="5" fill="#ff6f9a" opacity=".45"/><ellipse cx="88" cy="70" rx="8" ry="5" fill="#ff6f9a" opacity=".45"/>
+    <ellipse cx="60" cy="74" rx="18" ry="13" fill="#ff8fb3"/>
+    <ellipse cx="53" cy="74" rx="3.5" ry="5" fill="#b8466b"/><ellipse cx="67" cy="74" rx="3.5" ry="5" fill="#b8466b"/>
+    <path d="M48 92q12 8 24 0" stroke="#5b2a3a" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <g fill="#ffd79a"><path d="M98 18l2 5 5 2-5 2-2 5-2-5-5-2 5-2z"/><circle cx="16" cy="44" r="2.5"/></g>
+  </symbol>
+</svg>
+
+<main class="app">
+  <!-- Cover -->
+  <section class="screen cover active" id="cover" aria-labelledby="t1">
+    <div class="eyebrow">⚖️ 一个关于满足感的小测验</div>
+    <div class="duo" aria-hidden="true">
+      <svg class="avatar l"><use href="#socrates"/></svg>
+      <span class="vs">or</span>
+      <svg class="avatar r"><use href="#pig"/></svg>
+    </div>
+    <h1 class="title" id="t1">你是<span class="a">痛苦的苏格拉底</span>，<br>还是<span class="b">快乐的猪</span>？</h1>
+    <figure class="quote card">
+      <p>做一个不满足的人，胜过做一只满足的猪；做一个不满足的苏格拉底，胜过做一个满足的傻瓜。</p>
+      <cite>—— 约翰·斯图尔特·密尔《功利主义》，1863</cite>
+    </figure>
+    <p class="intro">密尔当然站苏格拉底那边。但我们不站队——追问让人深刻，满足让人松弛，两种活法都值得被认真对待。12 个日常小场景，凭第一直觉选就好。</p>
+    <button class="btn" id="startBtn">开始测试
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    </button>
+    <div class="meta"><span>⏱ 约 2 分钟</span><span>🧩 12 题</span><span>🔒 不收集任何数据</span></div>
+  </section>
+
+  <!-- Quiz -->
+  <section class="screen quiz" id="quiz" aria-live="polite">
+    <div class="topbar">
+      <button class="iconbtn" id="backBtn" aria-label="上一题" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+      </button>
+      <div class="progress">
+        <div class="label"><span>第 <b id="qNum">1</b> / <span id="qTotal">12</span> 题</span><span id="qPct">0%</span></div>
+        <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="track"><div class="fill" id="fill"></div></div>
+      </div>
+    </div>
+    <div class="lean" aria-hidden="true"><span>🏛️ 追问</span><div class="mini"><div class="dot" id="leanDot"></div></div><span>满足 🐷</span></div>
+    <div class="stage" id="stage"></div>
+    <p class="hint">没有标准答案，凭第一直觉选 · 可随时返回上一题</p>
+  </section>
+
+  <!-- Result -->
+  <section class="screen result" id="result" aria-live="polite">
+    <div class="rcard card reveal" id="rcard">
+      <div class="kicker">你 的 测 试 结 果</div>
+      <div class="illu" id="illu"></div>
+      <h2 class="rtitle" id="rTitle"></h2>
+      <p class="rsub" id="rSub"></p>
+      <div class="meter">
+        <div class="ends">
+          <div class="end l"><small>苏格拉底指数</small><b id="sPct">0%</b></div>
+          <div class="end r"><small>快乐小猪指数</small><b id="pPct">0%</b></div>
+        </div>
+        <div class="bar"><span class="tick" style="left:22%"></span><span class="tick" style="left:42%"></span><span class="tick" style="left:58%"></span><span class="tick" style="left:78%"></span><div class="knob" id="knob">⚖️</div></div>
+        <div class="scale"><span>痛苦的苏格拉底</span><span>清醒的享乐者</span><span>快乐的猪</span></div>
+      </div>
+      <p class="rdesc" id="rDesc"></p>
+      <div class="tags" id="rTags"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="retryBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>再测一次</button>
+      <button class="btn ghost" id="shareBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>生成分享图</button>
+      <button class="btn ghost" id="copyBtn">复制结果文字</button>
+    </div>
+    <p class="note">密尔说，宁做不满足的人。可他也说过：问自己是否幸福，幸福便不再。<br>——别太较真，喜欢你自己就好。</p>
+  </section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+<div class="modal" id="shareModal" role="dialog" aria-modal="true" aria-label="分享图">
+  <button class="iconbtn close" id="closeShare" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <div class="sheet">
+    <img class="poster loading" id="posterImg" alt="测试结果分享图">
+    <p class="tip" id="shareTip">长按图片可保存到相册，或发送给朋友</p>
+    <div class="row">
+      <a class="btn" id="saveBtn" download="苏格拉底还是猪-测试结果.png" href="#">保存图片</a>
+      <button class="btn ghost" id="nativeShareBtn" hidden>分享…</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  // s = 苏格拉底分（1 = 追问/不满足，0 = 享受/满足）
+  var QUESTIONS = [
+    {tag:'周末', q:'周六早上自然醒，一整天没有任何安排。你会——', o:[
+      ['翻开那本搁置半年的书，顺便想想人生方向',1],
+      ['去一家新开的咖啡馆，边喝边观察路人',.66],
+      ['约朋友吃顿早午餐，聊点轻松八卦',.33],
+      ['翻个身继续睡。周末，本来就是拿来浪费的',0]]},
+    {tag:'观影', q:'一部全网刷屏的爆款电影，你看完觉得……很一般。你会——', o:[
+      ['写一篇长评，逐条论证它为什么被高估',1],
+      ['去翻翻影评，想知道别人到底看到了什么',.66],
+      ['可能我没 get 到，无所谓',.33],
+      ['爆米花挺好吃的，这张票不亏',0]]},
+    {tag:'深夜', q:'凌晨一点，你突然意识到「人终有一死」。接下来——', o:[
+      ['彻底睡不着了，开始搜索加缪和存在主义',1],
+      ['发了会儿呆，决定明天对家人好一点',.5],
+      ['打开外卖 App：既然如此，先吃顿好的',0]]},
+    {tag:'选择', q:'工作稳定、薪水不错，但每天都在重复。有人邀请你去做一件有意义、却很不确定的事——', o:[
+      ['心动了：「不确定」才是活着的证据',1],
+      ['认真列一张利弊表，列到了第三页',.66],
+      ['先观望，等它靠谱一点再说',.33],
+      ['稳定就是福气，按时下班也是一种修行',0]]},
+    {tag:'灵魂拷问', q:'朋友突然问你：「你现在幸福吗？」你的第一反应是——', o:[
+      ['「先等等，我们得定义一下什么叫幸福。」',1],
+      ['沉默三秒：「……大概，算吧？」',.5],
+      ['「挺幸福的啊，今天奶茶点了全糖。」',0]]},
+    {tag:'旅行', q:'到了一座陌生的城市，你最想把时间花在——', o:[
+      ['博物馆，把每一块展牌都认真读完',1],
+      ['钻进老街小巷，和当地人搭话',.66],
+      ['按照美食榜单，一家一家吃过去',.33],
+      ['酒店泳池边躺一下午，哪儿也不去',0]]},
+    {tag:'争论', q:'你深信不疑的一个观点，被别人有理有据地驳倒了。你——', o:[
+      ['竟然有点兴奋：终于有人能让我想得更深',1],
+      ['心里有点堵，回家默默查了一晚上资料',.66],
+      ['求同存异嘛，没必要争个输赢',.33],
+      ['啊？哦。那……先去吃饭吧',0]]},
+    {tag:'思想实验', q:'有一颗药丸：吃下后你将永远满足、无忧无虑，代价是再也不会思考深刻的问题。你——', o:[
+      ['坚决不吃。烦恼也是「我」的一部分',1],
+      ['犹豫了……能不能只吃半颗？',.5],
+      ['还有这种好事？麻烦来两颗',0]]},
+    {tag:'夜晚', q:'下班到家，你心目中最理想的夜晚是——', o:[
+      ['一个人安静地写点东西，复盘今天',1],
+      ['和一两个好朋友深聊到半夜',.66],
+      ['追剧配零食，让大脑彻底放空',.33],
+      ['洗个热水澡，九点半准时躺平',0]]},
+    {tag:'被评价', q:'有人对你说：「你就是想太多了。」你心里的第一句话是——', o:[
+      ['不是我想太多，是大家想太少',1],
+      ['也许吧……可我就是停不下来',.66],
+      ['有道理，我是该松弛一点了',.33],
+      ['我？想太多？这辈子头一回听说',0]]},
+    {tag:'手机', q:'这周的「屏幕使用时间」报告出来了，排第一的最可能是——', o:[
+      ['电子书、播客或者公开课',1],
+      ['长文章和各种深度问答',.66],
+      ['短视频，刷着刷着天就亮了',.2],
+      ['外卖、游戏和购物车',0]]},
+    {tag:'终章', q:'很多年以后，你希望自己的墓志铭上写着——', o:[
+      ['「此人一生都在追问，直到最后一刻」',1],
+      ['「认真地想过，也认真地爱过」',.5],
+      ['「此人吃得很好，睡得很香」',0]]}
+  ];
+
+  var TIERS = [
+    {min:.78, key:'soc', title:'痛苦的苏格拉底', sub:'「未经审视的人生，不值得过。」', emoji:'🏛️',
+     desc:'你的大脑大概从来没有真正下过班：别人看见一朵花，你看见了无常；别人点完菜，你还在思考选择的意义。这份不满足常让你失眠，却也是你最珍贵的天赋——世界上那些重要的问题，正是被你这样的人问出来的。偶尔记得，思考也可以休个假。',
+     tags:['#追问到底','#深夜哲学家','#宁醒勿醉'], illu:['socrates'], h:['#5d6bff','#3fd0c9'], theme:1},
+    {min:.58, key:'soc-lean', title:'偏苏格拉底', sub:'思考是本能，享受要排期', emoji:'📚',
+     desc:'你习惯先想清楚再出发，对「差不多就行」天然有点警惕。好在你也懂得给自己留一块柔软的地方——一杯好咖啡、一场好觉，就能把你从思考的深水区捞上岸。你是那种会认真生活、也会认真反省的人。',
+     tags:['#清醒型选手','#爱问为什么','#偶尔放过自己'], illu:['socrates'], h:['#7b7bff','#56d6c4'], theme:.72},
+    {min:.42, key:'mid', title:'清醒的享乐者', sub:'在苏格拉底和小猪之间，走出了第三条路', emoji:'🍷',
+     desc:'你能和朋友聊存在主义聊到深夜，也能心安理得地睡到中午；你知道人生没有标准答案，所以干脆既追问、也享受。这种平衡看似轻松，其实需要相当的智慧——伊壁鸠鲁大概会很想请你吃顿饭。',
+     tags:['#张弛有度','#想得明白也睡得着','#人间清醒'], illu:['socrates','pig'], h:['#9b7bff','#ff8fb6'], theme:.5},
+    {min:.22, key:'pig-lean', title:'偏快乐的猪', sub:'想得通的就想，想不通的先吃', emoji:'🍜',
+     desc:'你不是不会思考，只是很早就发现：大部分烦恼，睡一觉就小了一半。你擅长在平凡日子里打捞快乐，也让身边的人跟着松弛下来。偶尔被一个深刻的问题击中时，你也愿意停下来想一想——只要别耽误晚饭。',
+     tags:['#情绪稳定','#快乐捕手','#人间烟火'], illu:['pig'], h:['#ffb36b','#ff7aa8'], theme:.28},
+    {min:-1, key:'pig', title:'快乐的猪', sub:'「满足」本身就是一种天赋', emoji:'🐷',
+     desc:'恭喜你，拥有这个时代最稀缺的能力：知足。别人在焦虑意义，你在晒太阳；别人辗转反侧，你一夜好眠。密尔或许会为你惋惜，但庄子大概会对你会心一笑——「子非猪，安知猪之乐？」',
+     tags:['#知足常乐','#吃饱睡好','#内耗绝缘体'], illu:['pig'], h:['#ffc46b','#ff7aa8'], theme:0}
+  ];
+
+  var $ = function(id){return document.getElementById(id)};
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var screens = {cover:$('cover'), quiz:$('quiz'), result:$('result')};
+  var current = 'cover';
+  var idx = 0, answers = [], order = [], busy = false;
+  $('qTotal').textContent = QUESTIONS.length;
+
+  function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t}return a}
+
+  function show(name){
+    if(name===current) return;
+    var from = screens[current], to = screens[name];
+    from.classList.add('leave'); from.classList.remove('active');
+    setTimeout(function(){from.classList.remove('leave')}, 650);
+    to.classList.add('active');
+    current = name;
+    window.scrollTo({top:0, behavior: reduce ? 'auto' : 'smooth'});
+  }
+
+  function setTheme(lean){ // lean: 1 = socrates, 0 = pig, null = neutral
+    var soc = 0, pig = 0;
+    if(lean !== null){ soc = Math.max(0, Math.min(1, (lean-.5)*2.2)); pig = Math.max(0, Math.min(1, (.5-lean)*2.2)); }
+    $('bgSoc').style.opacity = soc; $('bgPig').style.opacity = pig;
+  }
+
+  function avgScore(){
+    var n=0,s=0; for(var i=0;i<answers.length;i++){ if(answers[i]!=null){s+=answers[i].s;n++} }
+    return n? s/n : .5;
+  }
+
+  function updateProgress(){
+    var done = answers.filter(function(a){return a!=null}).length;
+    var pct = Math.round(done/QUESTIONS.length*100);
+    $('fill').style.width = pct + '%';
+    $('qPct').textContent = pct + '%';
+    $('track').setAttribute('aria-valuenow', pct);
+    $('qNum').textContent = Math.min(idx+1, QUESTIONS.length);
+    $('backBtn').disabled = idx===0;
+    var lean = avgScore();
+    $('leanDot').style.left = ((1-lean)*100) + '%';
+    setTheme(done ? .5 + (lean-.5)*.6 : null); // subtle drift while answering
+  }
+
+  function renderQuestion(dir){
+    var stage = $('stage');
+    var q = QUESTIONS[idx];
+    var old = stage.querySelector('.qcard:not(.out)');
+    if(old){
+      old.classList.add('out'); if(dir==='back') old.classList.add('back');
+      setTimeout(function(){ if(old.parentNode) old.parentNode.removeChild(old) }, reduce?0:350);
+    }
+    var card = document.createElement('div');
+    card.className = 'qcard card in' + (dir==='back'?' back':'');
+    var keys = 'ABCD';
+    var html = '<div class="qhead"><span class="qtag">Q' + (idx+1) + ' · ' + q.tag + '</span><h2 class="qtext">' + q.q + '</h2></div><ul class="opts" role="list">';
+    order[idx].forEach(function(oi, k){
+      var picked = answers[idx] && answers[idx].i===oi;
+      html += '<li style="display:contents"><button class="opt' + (picked?' picked':'') + '" data-i="' + oi + '"><span class="key">' + keys[k] + '</span><span class="txt">' + q.o[oi][0] + '</span></button></li>';
+    });
+    html += '</ul>';
+    card.innerHTML = html;
+    var delay = old && !reduce ? 180 : 0;
+    card.style.animationDelay = delay + 'ms';
+    stage.appendChild(card);
+    card.querySelectorAll('.opt').forEach(function(b){ b.addEventListener('click', onPick) });
+    updateProgress();
+    busy = false;
+  }
+
+  function onPick(e){
+    if(busy) return; busy = true;
+    var btn = e.currentTarget, i = +btn.getAttribute('data-i');
+    // ripple
+    var r = btn.getBoundingClientRect(), size = Math.max(r.width, r.height);
+    var rip = document.createElement('span'); rip.className='ripple';
+    var x = (e.clientX || r.left + r.width/2) - r.left - size/2, y = (e.clientY || r.top + r.height/2) - r.top - size/2;
+    rip.style.cssText = 'width:'+size+'px;height:'+size+'px;left:'+x+'px;top:'+y+'px';
+    btn.appendChild(rip);
+    btn.parentNode.parentNode.querySelectorAll('.opt').forEach(function(o){ o.classList.toggle('picked', o===btn); o.classList.toggle('dim', o!==btn) });
+    answers[idx] = {i:i, s:QUESTIONS[idx].o[i][1]};
+    if(navigator.vibrate) try{navigator.vibrate(8)}catch(_){}
+    updateProgress();
+    setTimeout(function(){
+      if(idx < QUESTIONS.length-1){ idx++; renderQuestion('fwd') }
+      else { showResult() }
+    }, reduce ? 120 : 420);
+  }
+
+  function start(){
+    idx = 0; answers = []; busy = false;
+    order = QUESTIONS.map(function(q){ return shuffle(q.o.map(function(_,i){return i})) });
+    $('stage').innerHTML = '';
+    show('quiz');
+    renderQuestion('fwd');
+  }
+
+  function countUp(el, to, ms){
+    if(reduce){ el.textContent = to + '%'; return }
+    var t0 = performance.now();
+    (function tick(t){
+      var p = Math.min(1, (t-t0)/ms); var e = 1-Math.pow(1-p,3);
+      el.textContent = Math.round(to*e) + '%';
+      if(p<1) requestAnimationFrame(tick);
+    })(t0);
+  }
+
+  var lastResult = null;
+  function showResult(){
+    var s = avgScore();
+    var sp = Math.round(s*100), pp = 100 - sp;
+    var tier = TIERS.filter(function(t){return s>=t.min})[0];
+    lastResult = {tier:tier, sp:sp, pp:pp};
+    // build illustration
+    var illu = $('illu');
+    illu.style.setProperty('--h1', tier.h[0]); illu.style.setProperty('--h2', tier.h[1]);
+    var svg;
+    if(tier.illu.length===2){
+      svg = '<svg class="avatar" viewBox="0 0 120 120" aria-hidden="true"><use href="#socrates" x="-6" y="14" width="76" height="76"/><use href="#pig" x="50" y="14" width="76" height="76"/></svg>';
+    } else {
+      svg = '<svg class="avatar" aria-hidden="true"><use href="#' + tier.illu[0] + '"/></svg>';
+    }
+    var C = 2*Math.PI*90;
+    var ring = '<svg class="ring" viewBox="0 0 200 200" aria-hidden="true"><defs>' +
+      '<linearGradient id="rgS" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6d7cff"/><stop offset="1" stop-color="#3fd0c9"/></linearGradient>' +
+      '<linearGradient id="rgP" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffc46b"/><stop offset="1" stop-color="#ff7aa8"/></linearGradient></defs>' +
+      '<circle cx="100" cy="100" r="90" stroke="url(#rgP)" opacity=".95"/>' +
+      '<circle class="arc" id="arc" cx="100" cy="100" r="90" stroke="url(#rgS)" stroke-dasharray="' + C + '" stroke-dashoffset="' + C + '"' + (sp===0?' style="display:none"':'') + '/></svg>';
+    illu.innerHTML = '<div class="halo"></div><div class="disc"></div>' + ring + svg;
+    $('rTitle').textContent = tier.emoji + ' ' + tier.title;
+    $('rSub').textContent = tier.sub;
+    $('rDesc').textContent = tier.desc;
+    $('rTags').innerHTML = tier.tags.map(function(t){return '<span>'+t+'</span>'}).join('');
+    // reset meter
+    $('knob').style.transition='none'; $('knob').style.left='calc((100% - 34px) * .5)'; $('knob').textContent='⚖️';
+    $('sPct').textContent='0%'; $('pPct').textContent='0%';
+    // restart reveal animations
+    var rc = $('rcard'); rc.classList.remove('reveal'); void rc.offsetWidth; rc.classList.add('reveal');
+    show('result');
+    setTheme(tier.theme);
+    setTimeout(function(){
+      $('knob').style.transition='';
+      $('knob').style.left = 'calc((100% - 34px) * ' + (pp/100) + ')';
+      var arc = $('arc'); if(arc) arc.style.strokeDashoffset = C*(1-sp/100);
+      $('knob').textContent = sp>=58 ? '🏛️' : sp<=42 ? '🐷' : '⚖️';
+      countUp($('sPct'), sp, 1500); countUp($('pPct'), pp, 1500);
+      confetti(tier);
+    }, reduce ? 0 : 1100);
+  }
+
+  function confetti(tier){
+    if(reduce) return;
+    var rc = $('rcard'), cols = [tier.h[0], tier.h[1], '#fff', '#ffd79a'];
+    for(var i=0;i<22;i++){
+      var sp = document.createElement('i'); sp.className='spark';
+      var ang = Math.random()*Math.PI*2, dist = 90 + Math.random()*120;
+      sp.style.setProperty('--x', Math.cos(ang)*dist+'px'); sp.style.setProperty('--y', (Math.sin(ang)*dist - 40)+'px');
+      sp.style.setProperty('--r', (Math.random()*540-270)+'deg');
+      sp.style.background = cols[i%cols.length]; sp.style.top = '22%';
+      sp.style.animationDelay = (Math.random()*.15)+'s';
+      rc.appendChild(sp);
+      (function(n){ setTimeout(function(){ n.remove() }, 1800) })(sp);
+    }
+  }
+
+  function toast(msg){
+    var t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove('show') }, 1800);
+  }
+
+  function copyResult(){
+    if(!lastResult) return;
+    var txt = '我在「你是痛苦的苏格拉底，还是快乐的猪？」里测出来是：' + lastResult.tier.emoji + lastResult.tier.title +
+      '（苏格拉底 ' + lastResult.sp + '% / 快乐小猪 ' + lastResult.pp + '%）。你呢？';
+    function fallback(){
+      var ta = document.createElement('textarea'); ta.value = txt; ta.setAttribute('readonly',''); ta.style.cssText='position:fixed;opacity:0;left:-9999px';
+      document.body.appendChild(ta); ta.select();
+      var ok = false; try{ ok = document.execCommand('copy') }catch(_){}
+      ta.remove(); toast(ok ? '已复制，去分享吧 ✨' : '复制失败，请手动截图分享');
+    }
+    if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(txt).then(function(){toast('已复制，去分享吧 ✨')}, fallback) }
+    else fallback();
+  }
+
+  /* ---------- Share image (pure canvas, offline) ---------- */
+  var POSTER = window.POSTER_THEME || {
+    base:['#1d1640','#2a1650'], glow:.55, ink:'#ffffff', ink2:'rgba(255,255,255,.8)', ink3:'rgba(255,255,255,.55)',
+    panel:'rgba(255,255,255,.10)', stroke:'rgba(255,255,255,.22)', track:'rgba(255,255,255,.14)', disc:'rgba(255,255,255,.12)',
+    sGrad:['#6d7cff','#3fd0c9'], pGrad:['#ffc46b','#ff7aa8'], tierGlow:true
+  };
+  var SERIF = '"Songti SC","STSong","Noto Serif CJK SC","Source Han Serif SC",serif';
+  var SANS = '-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif';
+  function svgAvatarURL(ids){
+    var defs = document.querySelector('svg defs').outerHTML;
+    var inner = ids.map(function(id, k){
+      var sym = document.getElementById(id);
+      var tr = ids.length===2 ? (k===0 ? 'translate(-6,14) scale(.633)' : 'translate(50,14) scale(.633)') : '';
+      return '<g transform="' + tr + '">' + sym.innerHTML + '</g>';
+    }).join('');
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="480" height="480">' + defs + inner + '</svg>';
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+  function loadImg(src){ return new Promise(function(res, rej){ var im = new Image(); im.onload = function(){res(im)}; im.onerror = rej; im.src = src }) }
+  function wrap(ctx, text, maxW){
+    var lines = [], line = '';
+    var noStart = '，。、；：？！」』）》…—,.;:?!)';
+    for(var i=0;i<text.length;i++){
+      var ch = text[i], test = line + ch;
+      if(ctx.measureText(test).width > maxW && line){
+        if(noStart.indexOf(ch) > -1){ lines.push(test); line=''; continue }
+        lines.push(line); line = ch;
+      } else line = test;
+    }
+    if(line) lines.push(line);
+    return lines;
+  }
+  function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath() }
+  function grad(ctx,x0,y0,x1,y1,c){ var g = ctx.createLinearGradient(x0,y0,x1,y1); c.forEach(function(col,i){ g.addColorStop(i/(c.length-1), col) }); return g }
+
+  function drawPoster(){
+    var r = lastResult, t = r.tier, P = POSTER, W = 1080;
+    var cv = document.createElement('canvas'); cv.width = W; cv.height = 10;
+    var ctx = cv.getContext('2d');
+    ctx.font = '400 34px ' + SANS;
+    var lines = wrap(ctx, t.desc, W-300);
+    var H = 1140 + lines.length*58 + 20 + 54 + 290;
+    cv.height = H; ctx = cv.getContext('2d');
+    // background
+    ctx.fillStyle = grad(ctx,0,0,W*.4,H,P.base); ctx.fillRect(0,0,W,H);
+    function glow(x,y,rad,col,a){ var g = ctx.createRadialGradient(x,y,0,x,y,rad); g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.globalAlpha=a; ctx.fillStyle=g; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1 }
+    var g1 = P.tierGlow ? t.h[0] : P.sGrad[0], g2 = P.tierGlow ? t.h[1] : P.pGrad[1];
+    glow(W*.15,H*.12,620,g1,P.glow); glow(W*.95,H*.45,560,g2,P.glow*.8); glow(W*.3,H*1.02,640,g1,P.glow*.7);
+    // card
+    var cx = 70, cy = 70, cw = W-140, ch = H-140;
+    rr(ctx,cx,cy,cw,ch,56); ctx.fillStyle = P.panel; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = P.stroke; ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = P.ink3; ctx.font = '600 30px ' + SANS;
+    ctx.fillText('你是痛苦的苏格拉底，还是快乐的猪？', W/2, 160);
+    // avatar + split ring
+    var ax = W/2, ay = 365, R = 150;
+    ctx.beginPath(); ctx.arc(ax,ay,R-14,0,Math.PI*2); ctx.fillStyle = P.disc; ctx.fill();
+    ctx.lineWidth = 16; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(ax,ay,R,0,Math.PI*2); ctx.strokeStyle = grad(ctx,ax-R,ay-R,ax+R,ay+R,P.pGrad); ctx.stroke();
+    if(r.sp>0){ ctx.beginPath(); ctx.arc(ax,ay,R,-Math.PI/2,-Math.PI/2+Math.PI*2*r.sp/100); ctx.strokeStyle = grad(ctx,ax-R,ay-R,ax+R,ay+R,P.sGrad); ctx.stroke() }
+    return loadImg(svgAvatarURL(t.illu)).then(function(im){
+      ctx.drawImage(im, ax-115, ay-115, 230, 230);
+    }).catch(function(){
+      ctx.font = '150px ' + SANS; ctx.fillText(t.emoji, ax, ay+52);
+    }).then(function(){
+      ctx.textAlign = 'center';
+      ctx.fillStyle = P.ink3; ctx.font = '500 28px ' + SANS; ctx.fillText('我 的 测 试 结 果 是', W/2, 590);
+      ctx.fillStyle = P.ink; ctx.font = '900 92px ' + SERIF; ctx.fillText(t.title, W/2, 700);
+      ctx.fillStyle = P.ink2; ctx.font = '400 34px ' + SANS; ctx.fillText(t.sub, W/2, 760);
+      // meter
+      var mx = 150, mw = W-300, my = 830;
+      rr(ctx,mx-30,my,mw+60,230,32); ctx.fillStyle = P.track; ctx.globalAlpha=.6; ctx.fill(); ctx.globalAlpha=1;
+      ctx.textAlign = 'left'; ctx.fillStyle = P.ink3; ctx.font = '500 28px ' + SANS; ctx.fillText('苏格拉底指数', mx, my+58);
+      ctx.textAlign = 'right'; ctx.fillText('快乐小猪指数', mx+mw, my+58);
+      ctx.fillStyle = P.ink; ctx.font = '800 64px ' + SANS;
+      ctx.textAlign = 'left'; ctx.fillText(r.sp + '%', mx, my+128);
+      ctx.textAlign = 'right'; ctx.fillText(r.pp + '%', mx+mw, my+128);
+      var by = my+170;
+      rr(ctx,mx,by-10,mw,20,10); ctx.fillStyle = grad(ctx,mx,0,mx+mw,0,[P.sGrad[0],P.sGrad[1],P.pGrad[0],P.pGrad[1]]); ctx.fill();
+      var kx = mx + 20 + (mw-40)*(r.pp/100);
+      ctx.beginPath(); ctx.arc(kx,by,26,0,Math.PI*2); ctx.fillStyle = '#fff'; ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=16; ctx.fill(); ctx.shadowBlur=0;
+      ctx.textAlign='center'; ctx.font = '28px ' + SANS; ctx.fillText(r.sp>=58?'🏛️':r.sp<=42?'🐷':'⚖️', kx, by+10);
+      // description
+      ctx.textAlign = 'left'; ctx.fillStyle = P.ink; ctx.font = '400 34px ' + SANS;
+      var ly = my+310;
+      lines.forEach(function(l,i){ ctx.fillText(l, 150, ly + i*58) });
+      // tags
+      ctx.font = '500 28px ' + SANS; ctx.textAlign='center';
+      var tw = t.tags.map(function(s){ return ctx.measureText(s).width + 44 }), total = tw.reduce(function(a,b){return a+b},0) + 20*(tw.length-1);
+      var tx = W/2 - total/2, ty = ly + lines.length*58 + 10;
+      t.tags.forEach(function(s,i){ rr(ctx,tx,ty,tw[i],54,27); ctx.fillStyle=P.track; ctx.fill(); ctx.strokeStyle=P.stroke; ctx.lineWidth=2; ctx.stroke(); ctx.fillStyle=P.ink2; ctx.fillText(s, tx+tw[i]/2, ty+37); tx += tw[i]+20 });
+      // footer
+      ctx.strokeStyle = P.stroke; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(150,H-200); ctx.lineTo(W-150,H-200); ctx.stroke();
+      ctx.fillStyle = P.ink3; ctx.font = 'italic 400 28px ' + SERIF; ctx.textAlign='center';
+      ctx.fillText('「做不满足的苏格拉底，胜过做满足的傻瓜。」—— 密尔', W/2, H-145);
+      ctx.fillStyle = P.ink2; ctx.font = '600 30px ' + SANS;
+      ctx.fillText('你是哪一种？来测测看 →', W/2, H-98);
+      return cv;
+    });
+  }
+
+  var posterURL = null, posterBlob = null;
+  function openShare(){
+    if(!lastResult) return;
+    var m = $('shareModal'), img = $('posterImg');
+    img.removeAttribute('src'); img.classList.add('loading');
+    m.classList.add('open'); $('closeShare').focus();
+    drawPoster().then(function(cv){
+      return new Promise(function(res){ cv.toBlob ? cv.toBlob(function(b){res({cv:cv,b:b})}, 'image/png') : res({cv:cv,b:null}) });
+    }).then(function(o){
+      if(posterURL) URL.revokeObjectURL(posterURL);
+      posterBlob = o.b;
+      posterURL = o.b ? URL.createObjectURL(o.b) : o.cv.toDataURL('image/png');
+      img.src = posterURL; img.classList.remove('loading');
+      $('saveBtn').href = posterURL;
+      var file = o.b && typeof File==='function' ? new File([o.b], '苏格拉底还是猪-测试结果.png', {type:'image/png'}) : null;
+      var canShare = !!(file && navigator.canShare && navigator.canShare({files:[file]}));
+      $('nativeShareBtn').hidden = !canShare;
+      $('nativeShareBtn').onclick = function(){ navigator.share({files:[file], title:'你是痛苦的苏格拉底，还是快乐的猪？'}).catch(function(){}) };
+    }).catch(function(err){ console.error(err); toast('分享图生成失败，请直接截图'); closeShare() });
+  }
+  function closeShare(){ $('shareModal').classList.remove('open') }
+
+  $('shareBtn').addEventListener('click', openShare);
+  $('closeShare').addEventListener('click', closeShare);
+  $('shareModal').addEventListener('click', function(e){ if(e.target===this) closeShare() });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeShare() });
+  $('startBtn').addEventListener('click', start);
+  $('retryBtn').addEventListener('click', function(){ closeShare(); setTheme(null); start() });
+  $('copyBtn').addEventListener('click', copyResult);
+  $('backBtn').addEventListener('click', function(){ if(busy||idx===0) return; idx--; renderQuestion('back') });
+  document.addEventListener('keydown', function(e){
+    if(current!=='quiz') return;
+    var k = e.key.toUpperCase(), map = {A:0,B:1,C:2,D:3,'1':0,'2':1,'3':2,'4':3};
+    if(k in map){ var opts = $('stage').querySelectorAll('.qcard:not(.out) .opt'); if(opts[map[k]]) opts[map[k]].click() }
+  });
+})();
+</script>
+</body>
+</html>
