@@ -405,6 +405,8 @@
   function rr(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath() }
   function grad(ctx,x0,y0,x1,y1,c){ var g = ctx.createLinearGradient(x0,y0,x1,y1); c.forEach(function(col,i){ g.addColorStop(c.length>1?i/(c.length-1):0, col) }); return g }
 
+  // 结果图上下留白（相对图片宽度），见 drawPoster
+  var POSTER_MARGIN = {top:.174, bottom:.256};
   function drawPoster(r){
     var Q = QUADS[r.cur], Wq = QUADS[r.want], W = 1080, PAD = 120, CW = W - 2*PAD;
     var cv = document.createElement('canvas'); cv.width = W; cv.height = 10;
@@ -437,10 +439,14 @@
     var tipsH = TPAD + L.tTitle.length*62 + 30 + L.tips.reduce(function(s,l){ return s + l.length*LH + 34 }, 0) + TPAD - 34;
     L.tipsTop = tipsTop; L.tipsH = tipsH;
     var H = tipsTop + tipsH + 300;
+    // 上下留白：全屏预览时（按宽度铺满）避开刘海/灵动岛与底部 Home 条。
+    // 比例取自参考长图：上留白 ≈ 0.174×宽，下留白 ≈ 0.256×宽（卡片外沿到图片边缘的纯背景）
+    var MT = Math.round(W*POSTER_MARGIN.top) - 50, MB = Math.round(W*POSTER_MARGIN.bottom) - 50, HF = H + MT + MB;
     // ---- 第二遍：绘制 ----
-    cv.height = H; ctx = cv.getContext('2d');
-    ctx.fillStyle = grad(ctx,0,0,W*.4,H,P.bg); ctx.fillRect(0,0,W,H);
-    function glow(x,y,rad,col,a){ if(!a) return; var g = ctx.createRadialGradient(x,y,0,x,y,rad); g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.globalAlpha=a; ctx.fillStyle=g; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1 }
+    cv.height = HF; ctx = cv.getContext('2d');
+    ctx.fillStyle = grad(ctx,0,0,W*.4,HF,P.bg); ctx.fillRect(0,0,W,HF);
+    function glow(x,y,rad,col,a){ if(!a) return; var g = ctx.createRadialGradient(x,y,0,x,y,rad); g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.globalAlpha=a; ctx.fillStyle=g; ctx.fillRect(0,-MT,W,HF); ctx.globalAlpha=1 }
+    ctx.translate(0, MT); // 以下仍按原坐标（卡片位于 50..H-50）绘制，背景与光晕已铺满留白
     var gl = P.glows || [qc, P.acc], G = function(c){ return c==='q' ? qc : c };
     glow(W*.12,H*.06,700,G(gl[0]),P.glow); glow(W*.95,H*.36,620,G(gl[1]),P.glow*.7); glow(W*.25,H*1.0,700,G(gl[0]),P.glow*.6);
     var cx0 = 50, cy0 = 50, cw = W-100, ch = H-100;
@@ -527,19 +533,31 @@
     var Q = QUADS[lastResult.cur], Wq = QUADS[lastResult.want];
     return navigator.share({files:[p.file], title:'你是痛苦的苏格拉底，还是快乐的猪？', text:'我现在是「' + Q.name + '」，我想成为「' + Wq.name + '」。你呢？'});
   }
-  function onShare(){
-    if(!lastResult) return;
-    if(poster && canShareFile(poster.file)){
-      shareNative(poster).catch(function(e){ if(!e || e.name!=='AbortError') openModal() });
-      return;
-    }
-    openModal();
+  // 「生成结果图」：总是先打开预览弹窗（不直接调起系统分享）
+  function onShare(){ if(lastResult) openModal() }
+  // 弹窗按钮：支持文件分享 → 「分享」主按钮 +「保存图片」次按钮；否则只有「保存图片」
+  function setShareButtons(p){
+    var can = !!p && canShareFile(p.file), sb = $('nativeShareBtn'), sv = $('saveBtn');
+    sb.hidden = !can; sb.disabled = !p;
+    sv.classList.toggle('ghost', can);
+  }
+  // 「分享」：必须在点击处理里同步调用 navigator.share（iOS Safari 需要用户激活），PNG 已在打开弹窗前/时预生成
+  function onNativeShare(){
+    if(!poster || !canShareFile(poster.file)){ $('saveBtn').click(); return }
+    var pr;
+    try{ pr = shareNative(poster) }catch(e){ shareFail(e); return }
+    if(pr && pr.catch) pr.catch(shareFail);
+  }
+  function shareFail(e){
+    if(e && e.name==='AbortError') return; // 用户取消，静默
+    console.warn('share', e); toast('分享没成功，请长按图片保存，或点「保存图片」');
   }
   var lastFocus = null;
   function openModal(){
     var m = $('shareModal'), img = $('posterImg');
     lastFocus = document.activeElement;
     img.removeAttribute('src'); img.classList.add('loading');
+    setShareButtons(null); $('nativeShareBtn').hidden = !(navigator.share && navigator.canShare);
     m.classList.add('open'); $('closeShare').focus();
     hset('result', true, true);
     (poster ? Promise.resolve(poster) : (posterP || prepPoster())).then(function(p){
@@ -547,6 +565,7 @@
       img.onload = function(){ if(img.naturalWidth) img.style.aspectRatio = img.naturalWidth + ' / ' + img.naturalHeight };
       img.src = p.url; img.classList.remove('loading');
       $('saveBtn').href = p.url;
+      setShareButtons(p);
     }).catch(function(err){ console.warn(err); toast('结果图生成失败，请直接截图'); closeShare() });
   }
   function closeShare(noHist){
@@ -558,6 +577,7 @@
   $('saveBtn').addEventListener('click', function(e){ if(!poster){ e.preventDefault(); return } toast('已开始保存；若无反应，请长按图片保存') });
 
   $('shareBtn').addEventListener('click', onShare);
+  $('nativeShareBtn').addEventListener('click', onNativeShare);
   $('closeShare').addEventListener('click', function(){ closeShare() });
   $('shareModal').addEventListener('click', function(e){ if(e.target===this) closeShare() });
 

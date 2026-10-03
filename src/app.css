@@ -184,7 +184,7 @@ a.btn{text-decoration:none}
 .hint{font-size:12px;color:var(--ink-3);text-align:center;letter-spacing:.04em}
 
 /* ---------- Result ---------- */
-.result{gap:14px;padding-bottom:6px}
+.result{gap:14px;padding-bottom:6px;padding-top:30px} /* 给右上角 GitHub 角标让位，结果卡圆角不被压住 */
 .rcard{padding:24px 18px 22px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:13px;overflow:hidden;position:relative}
 .rcard .kicker{font-size:12px;letter-spacing:.22em;color:var(--ink-3)}
 .rcard .kicker.speed{letter-spacing:.12em;color:var(--acc-ink);background:var(--acc);padding:5px 12px;border-radius:99px;font-weight:700}
@@ -333,7 +333,9 @@ a.btn{text-decoration:none}
 @keyframes shimmer{from{opacity:.4}to{opacity:.8}}
 .modal .tip{font-size:13px;color:var(--ink-2);text-align:center;flex:none}
 .modal .row{display:flex;gap:10px;flex:none}
-.modal .row .btn{min-height:52px;font-size:15.5px}
+.modal .row .btn{flex:1 1 0;min-width:0;min-height:52px;font-size:15.5px}
+.modal .row .btn[hidden]{display:none}
+.modal .row .btn:disabled{opacity:.55}
 .modal .close{position:absolute;top:calc(12px + var(--sat));right:calc(14px + var(--sar));}
 
 .spark{position:absolute;width:8px;height:8px;border-radius:2px;top:22%;left:50%;opacity:0;pointer-events:none;animation:spark 1.4s var(--ease) forwards}
