@@ -12,10 +12,12 @@
     "test:share": "node test/share.js",
     "test:colorscheme": "node test/colorscheme.js",
     "serve": "npx --yes serve dist -l 5173",
-    "test:share-flow": "node test/share-flow.js"
+    "test:share-flow": "node test/share-flow.js",
+    "test:qr": "node test/qr.js"
   },
   "devDependencies": {
-    "playwright-core": "^1.63.0"
+    "playwright-core": "^1.63.0",
+    "qrcode": "^1.5.4"
   },
   "engines": {
     "node": ">=18"

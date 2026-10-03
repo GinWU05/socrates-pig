@@ -407,6 +407,16 @@
 
   // 结果图上下留白（相对图片宽度），见 drawPoster
   var POSTER_MARGIN = {top:.174, bottom:.256};
+  // 二维码：纯黑模块 + 纯白底（含 4 模块静区），保证微信长按识别；矩阵在构建时生成（window.SP_QR）
+  function drawQR(ctx, x, y, m){
+    var q = window.SP_QR; if(!q || !q.n) return;
+    var n = q.n, side = (n + 8) * m;
+    ctx.save();
+    rr(ctx, x, y, side, side, 18); ctx.fillStyle = '#ffffff'; ctx.fill();
+    ctx.fillStyle = '#000000';
+    for(var r = 0; r < n; r++) for(var c = 0; c < n; c++) if(q.d.charCodeAt(r*n + c) === 49) ctx.fillRect(x + (c+4)*m, y + (r+4)*m, m, m);
+    ctx.restore();
+  }
   function drawPoster(r){
     var Q = QUADS[r.cur], Wq = QUADS[r.want], W = 1080, PAD = 120, CW = W - 2*PAD;
     var cv = document.createElement('canvas'); cv.width = W; cv.height = 10;
@@ -438,7 +448,8 @@
     L.tips = r.tips.map(function(t){ return wrapBal(ctx, t, TW) });
     var tipsH = TPAD + L.tTitle.length*62 + 30 + L.tips.reduce(function(s,l){ return s + l.length*LH + 34 }, 0) + TPAD - 34;
     L.tipsTop = tipsTop; L.tipsH = tipsH;
-    var H = tipsTop + tipsH + 300;
+    var QM = 8, QT = ((window.SP_QR && SP_QR.n) || 29)*QM + 8*QM; // 二维码：模块 8px、四周静区 4 模块 → 方块边长
+    var H = tipsTop + tipsH + 310 + QT;
     // 上下留白：全屏预览时（按宽度铺满）避开刘海/灵动岛与底部 Home 条。
     // 比例取自参考长图：上留白 ≈ 0.174×宽，下留白 ≈ 0.256×宽（卡片外沿到图片边缘的纯背景）
     var MT = Math.round(W*POSTER_MARGIN.top) - 50, MB = Math.round(W*POSTER_MARGIN.bottom) - 50, HF = H + MT + MB;
@@ -498,12 +509,19 @@
       });
       // 页脚
       ctx.textAlign = 'center';
-      ctx.strokeStyle = P.stroke; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(PAD,H-236); ctx.lineTo(W-PAD,H-236); ctx.stroke();
+      var qy = H - 98 - QT, qx = PAD + 10;               // 二维码方块左上角（整数像素，模块边缘锐利）
+      ctx.strokeStyle = P.stroke; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(PAD,qy-152); ctx.lineTo(W-PAD,qy-152); ctx.stroke();
       ctx.fillStyle = P.ink2; ctx.font = 'italic 400 32px ' + FONT_T;
-      ctx.fillText('「做不满足的苏格拉底，胜过做满足的傻瓜。」', W/2, H-170);
-      ctx.fillText('—— 密尔', W/2, H-124);
-      ctx.fillStyle = P.ink; ctx.font = '700 36px ' + FONT_S;
-      ctx.fillText('你是四个里的哪一个？来测测看 →', W/2, H-74);
+      ctx.fillText('「做不满足的苏格拉底，胜过做满足的傻瓜。」', W/2, qy-86);
+      ctx.fillText('—— 密尔', W/2, qy-40);
+      drawQR(ctx, qx, qy, QM);
+      var tx2 = qx + QT + 52, cyq = qy + QT/2;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = P.ink2; ctx.font = '600 30px ' + FONT_S; ctx.fillText('长按识别二维码', tx2, cyq - 80);
+      ctx.fillStyle = P.ink; ctx.font = '800 42px ' + FONT_S; ctx.fillText('你是四个里的哪一个？', tx2, cyq - 16);
+      ctx.fillStyle = P.acc; ctx.fillText('来测测看 →', tx2, cyq + 44);
+      ctx.fillStyle = P.ink3; ctx.font = '500 26px ' + FONT_S; ctx.fillText(((window.SP_QR && SP_QR.url) || '').replace(/^https?:\/\//, ''), tx2, cyq + 98);
+      ctx.textAlign = 'center';
       return cv;
     });
   }

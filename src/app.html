@@ -115,6 +115,7 @@
       <button class="btn ghost" id="speedBtn">⚡ 速通版 · 两题自评</button>
     </div>
     <div class="meta"><span>⏱ 约 3 分钟</span><span>🧩 <i id="metaCount">14</i> 题</span><span>🔒 不收集任何数据</span></div>
+    <p class="ver">build {{COMMIT}}</p>
   </section>
 
   <!-- Quiz -->
@@ -172,6 +173,7 @@
       <button class="linkbtn" id="homeBtn">回到首页</button>
     </div>
     <p class="note">密尔说，宁做不满足的人。可他也说过：问自己是否幸福，幸福便不再。<br>——别太较真，你本来就值得被喜欢。</p>
+    <p class="ver">build {{COMMIT}}</p>
   </section>
 </main>
 <div class="toast" id="toast" role="status"></div>
@@ -201,6 +203,7 @@
 </a>
 <script>
 window.POSTER_THEME = {{POSTER_JSON}};
+window.SP_QR = {{QR_JSON}}; // 构建时生成的二维码矩阵（n×n，1=深色模块）
 {{CHART_JS}}
 {{APP_JS}}
 </script>

@@ -8,7 +8,7 @@
 
 - 🌐 在线体验：<https://socrates-pig.000555.best>
 - 💻 源码仓库：<https://github.com/GinWU05/socrates-pig>
-- 📦 源码分在 `src/`，构建后产出单个自包含的 `dist/index.html`（CSS / JS / SVG 全部内联）：**运行时零依赖、不加载任何 CDN 或外部资源、可离线打开**。开发时只用到 `playwright-core` 跑测试
+- 📦 源码分在 `src/`，构建后产出单个自包含的 `dist/index.html`（CSS / JS / SVG 全部内联）：**运行时零依赖、不加载任何 CDN 或外部资源、可离线打开**。开发时只用到 `playwright-core`（跑测试）和 `qrcode`（构建时生成结果图里的二维码矩阵）
 
 <p align="center">
   <img src="docs/cover.png" width="230" alt="封面">
@@ -24,6 +24,8 @@
 - **维度图**：自绘 SVG 象限图（渐变象限、同心网格、刻度、呼吸光点、从「现在」指向「想成为」的虚线弧箭头、图例），可切换 4 轴雷达图（思考 / 享受 / 痛苦 / 快乐）；完整版答题时，顶栏的迷你象限会实时显示当前位置
 - **成长建议**：16 组内容——12 种 X → Y 的转变路径 + 4 种「保持现状」的健康建议，每组 3–4 条
 - **结果图分享**：canvas 绘制 1080 宽高清长图（含象限图、现在/想成为、建议；完整版另含两轴得分）。点「生成结果图」总是先打开预览弹窗（`<img>`，iOS 可长按保存）；支持文件分享的设备在弹窗里多一个「分享」主按钮（调起系统分享），否则只有「保存图片」。PNG 在打开弹窗前就已预生成，点「分享」时同步调用 `navigator.share`，满足 iOS Safari 的用户手势要求。结果图上下各留一段背景（上 ≈ 0.174×宽、下 ≈ 0.256×宽），在刘海 / 灵动岛 iPhone 上全屏查看时，内容不会被状态栏和 Home 指示条挡住
+- **结果图二维码**：结果图底部「来测测看」旁有一个指向 <https://socrates-pig.000555.best> 的二维码（版本 3、纠错等级 M、29×29 模块、每模块 8px、四周 4 模块白色静区，纯黑配纯白），可在微信里长按识别。矩阵在构建时由 `qrcode` 生成并内联进页面，运行时不依赖任何库
+- **构建版本**：封面和结果页最底部有一行很淡的 `build <提交短哈希>`，由 `build.js` 在构建时通过 `git rev-parse --short HEAD` 自动写入（不在 git 仓库时用环境变量 `SP_COMMIT`，再没有就显示 `dev`）。如果构建产物 `dist/` 在源码提交之后单独提交，页面上显示的是源码那次提交的哈希
 - **返回导航**：答题页左上角的返回箭头回到上一题，第 1 题时回到封面；右上角的房子图标（「回到首页」），已有答题进度时先确认「退出后本次答题进度会丢失」；结果页底部有「回到首页」。浏览器历史按「封面 → 答题/结果 → 结果图弹窗」三层记录（`history.pushState` / `popstate`），所以手机返回手势和浏览器后退会：先关掉结果图弹窗；答题中有进度时弹出退出确认（再按一次返回 = 取消）；没有进度或在结果页时回到封面。返回手势不会逐题后退
 - **固定配色**：唯一皮肤「深夜」靛紫；不跟随系统深浅色，阻止 Android Chrome 自动深色与 Dark Reader 等扩展改色（`color-scheme: only light`、`supported-color-schemes`、`darkreader-lock`）
 - **禁止缩放**：`maximum-scale=1, user-scalable=no`、`touch-action: manipulation`，并拦截 iOS 双指缩放 / 双击放大
@@ -77,8 +79,10 @@ socrates-pig/
 │   ├── themes.js            # 全流程点测 + 截图
 │   ├── share.js             # 多场景结果图 + 弹窗比例 + 防缩放检查
 │   ├── share-flow.js        # 分享流程：先预览、「分享」同步调用、无文件分享时只显示保存
-│   └── colorscheme.js       # 浅色 / 深色 / 强制深色下逐字节比对截图
+│   ├── colorscheme.js       # 浅色 / 深色 / 强制深色下逐字节比对截图
+│   └── qr.js                # 导出结果图到 shots/qr/，配合 scripts/qr-decode.py 验证二维码
 ├── scripts/notch-check.py   # 结果图留白检查：模拟刘海屏全屏预览，生成前后对比图
+├── scripts/qr-decode.py     # 结果图二维码解码（zxing + 微信开源识别引擎，含缩小 / JPEG 压缩变体）
 ├── docs/                    # README 用截图（cover / question / result / chart / share-modal / share）
 ├── legacy/index.v1.html     # 旧版（12 题、单维度、5 档结果），仅留档
 ├── build.js                 # 构建：把 src/ 内联进单个 HTML，输出到 dist/
@@ -101,7 +105,7 @@ npm test             # 构建 + 测正式入口 + 结果图/防缩放 + 分享�
 npm run test:all     # 额外把 dist/archive/ 里的 5 个主题全测一遍
 ```
 
-单独跑某一项：`npm run test:themes`（不带参数会测正式入口 + 5 个存档主题）、`npm run test:share`、`npm run test:share-flow`、`npm run test:colorscheme`。这几个命令不会先构建，改了 `src/` 要先 `npm run build`。
+单独跑某一项：`npm run test:qr`、`npm run test:themes`（不带参数会测正式入口 + 5 个存档主题）、`npm run test:share`、`npm run test:share-flow`、`npm run test:colorscheme`。这几个命令不会先构建，改了 `src/` 要先 `npm run build`。
 
 修改 `src/` 后必须重新构建，`dist/` 不要手改。
 
@@ -119,6 +123,15 @@ CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm t
 - `test/colorscheme.js`：分别在浅色、深色、Chrome 强制深色下渲染，截图必须逐字节一致
 
 截图输出到 `shots/`（已在 `.gitignore` 中忽略）。
+
+二维码识别检查（可选，需要 Python）：
+
+```bash
+pip install zxing-cpp "opencv-contrib-python-headless<5" pillow
+npm run test:qr     # 导出 shots/qr/share-390x844.png 等
+# 可选：下载微信识别模型（WeChatCV/opencv_3rdparty 的 wechat_qrcode 分支：detect/sr 的 .prototxt 与 .caffemodel）
+WECHAT_MODELS=模型目录 python scripts/qr-decode.py shots/qr/share-*.png --expect https://socrates-pig.000555.best
+```
 
 结果图留白检查（可选，需要 Python 和 `pip install pillow numpy`）：
 

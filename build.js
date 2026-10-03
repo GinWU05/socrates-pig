@@ -1,6 +1,17 @@
 // 用法：node build.js —— 从 src/ 单一源码 + 主题 CSS 生成自包含单文件
 // 输出：dist/index.html（正式，= 主题 1「深夜」）+ dist/archive/（5 个主题 + 选择页，仅存档）
-const fs = require('fs'), path = require('path');
+const fs = require('fs'), path = require('path'), { execSync } = require('child_process');
+const QRCode = require('qrcode');
+// 结果图里的二维码：构建时生成矩阵（运行时不需要任何库）
+const SITE = 'https://socrates-pig.000555.best';
+const qr = QRCode.create(SITE, { errorCorrectionLevel: 'M' });
+const QR = { url: SITE, n: qr.modules.size, d: Array.from(qr.modules.data, b => b ? 1 : 0).join('') };
+// 页脚版本：当前 git 提交短哈希（构建时自动写入，不手写）；不在 git 仓库时用 SP_COMMIT，否则 'dev'
+const COMMIT = (() => {
+  try { return execSync('git rev-parse --short HEAD', { cwd: __dirname, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch (_) {}
+  return process.env.SP_COMMIT || 'dev';
+})();
+if (!/^[\w.-]+$/.test(COMMIT)) throw new Error('bad commit id: ' + COMMIT);
 const R = p => fs.readFileSync(path.join(__dirname, p), 'utf8');
 const tpl = R('src/app.html'), css = R('src/app.css'), js = R('src/app.js'), chartJs = R('src/chart.js');
 const THEMES = ['1-dark','2-dusk','3-paper','4-aurora','5-contrast'];
@@ -13,7 +24,8 @@ for (const id of THEMES) {
   const cfg = JSON.parse(R(`src/themes/${id}.json`));
   const html = fill(tpl, {
     APP_CSS: css, APP_JS: js, CHART_JS: chartJs, THEME_ID: id, THEME_CSS: R(`src/themes/${id}.css`),
-    POSTER_JSON: JSON.stringify(cfg.poster), THEME_COLOR: cfg.color
+    POSTER_JSON: JSON.stringify(cfg.poster), THEME_COLOR: cfg.color,
+    QR_JSON: JSON.stringify(QR), COMMIT: COMMIT
   });
   if (/\{\{\w+\}\}/.test(html)) throw new Error('unfilled placeholder in ' + id);
   fs.writeFileSync(path.join(archive, id + '.html'), html);
@@ -57,4 +69,4 @@ p{font-size:14px;line-height:1.7;color:rgba(235,232,245,.7)}
     ${items}
 </main></body></html>`;
 fs.writeFileSync(path.join(archive, 'themes.html'), chooser);
-console.log('built dist/index.html (= 1-dark, 正式唯一皮肤) + dist/archive/ (5 主题 + 选择页)');
+console.log('built dist/index.html (= 1-dark, 正式唯一皮肤) + dist/archive/ (5 主题 + 选择页)  commit=' + COMMIT + '  qr=v' + qr.version + '-M ' + QR.n + 'x' + QR.n);
