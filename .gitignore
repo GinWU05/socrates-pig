@@ -16,3 +16,6 @@ npm-debug.log*
 *.log
 .env
 .env.*
+
+# Cloudflare wrangler 本地缓存
+.wrangler/
