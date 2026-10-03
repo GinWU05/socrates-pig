@@ -184,7 +184,7 @@
     from.classList.add('leave'); from.classList.remove('active');
     setTimeout(function(){from.classList.remove('leave')}, 650);
     to.classList.add('active');
-    current = name;
+    current = name; document.body.setAttribute('data-screen', name);
     window.scrollTo({top:0, behavior:'auto'});
   }
   function setQuadTint(k){ if(k) document.body.setAttribute('data-q', k); else document.body.removeAttribute('data-q') }

@@ -15,13 +15,14 @@ async function newPage(browser, reduce){
   page.on('pageerror', e => errs.push('pageerror: '+e.message));
   return {ctx, page, errs};
 }
-async function runFull(page, target, want, shotPrefix){
+async function runFull(page, target, want, shotPrefix, onQuiz){
   const W = reduceW(page);
   await page.click('#startBtn'); await page.waitForTimeout(W(900));
   const total = +(await page.textContent('#qTotal')); ok(total===14, 'total '+total);
   const [sa, sb] = SIGN[target];
   for (let i=0;i<total;i++){
     if (shotPrefix && i===3) await page.screenshot({ path: shotPrefix+'question.png' });
+    if (onQuiz && i===3) await onQuiz();
     if (shotPrefix && i===total-1) await page.screenshot({ path: shotPrefix+'question-wish.png' });
     let sel;
     if (i < total-1) {
@@ -52,12 +53,15 @@ async function checkResult(page, cur, want, speed){
   ok(sw[0]<=390 && sw[1]<=390, 'hscroll '+sw);
   return `${r.cur}->${r.want} A=${r.A.toFixed(2)} B=${r.B.toFixed(2)} tips=${tips}`;
 }
+// GitHub 角标：是否可见（封面/结果页可见，答题页与弹窗打开时隐藏）
+const ghVisible = page => page.$eval('#ghCorner', e => { const cs = getComputedStyle(e); return cs.visibility === 'visible' && +cs.opacity > 0.5 });
 async function share(page, file){
   const hasCanShare = await page.evaluate(() => !!navigator.canShare);
   await page.click('#shareBtn');
   await page.waitForSelector('#shareModal.open', {timeout:5000});
   await page.waitForFunction(() => { const i=document.getElementById('posterImg'); return i.src && i.complete && i.naturalWidth>0 }, null, {timeout:10000});
   await page.waitForTimeout(500);
+  ok(!(await ghVisible(page)), 'gh corner hidden while share modal open');
   if (file) {
     await page.screenshot({ path: file.replace('.png','-modal.png') });
     const b64 = await page.evaluate(async () => { const r = await fetch(document.getElementById('posterImg').src); const b = await r.blob(); return await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result.split(',')[1]); fr.readAsDataURL(b) }) });
@@ -139,8 +143,13 @@ async function navTests(page, n){
     await page.goto(url); await page.waitForTimeout(1500);
     await page.screenshot({ path: SHOTS+`${n}-cover.png` });
     await page.screenshot({ path: SHOTS+`${n}-cover-full.png`, fullPage:true });
-    await runFull(page, 'SP', 'PH', SHOTS+`${n}-`);
+    { const a = await page.$eval('#ghCorner', e => ({ href:e.href, target:e.target, rel:e.rel, label:e.getAttribute('aria-label'), r:e.getBoundingClientRect().right }));
+      ok(await ghVisible(page), 'gh corner visible on cover');
+      ok(a.href==='https://github.com/GinWU05/socrates-pig' && a.target==='_blank' && /noopener/.test(a.rel) && !!a.label, 'gh corner attrs ' + JSON.stringify(a));
+      ok(Math.abs(a.r - 390) < 1, 'gh corner at right edge'); }
+    await runFull(page, 'SP', 'PH', SHOTS+`${n}-`, async () => ok(!(await ghVisible(page)), 'gh corner hidden on quiz'));
     console.log('  full', await checkResult(page, 'SP', 'PH', false));
+    ok(await ghVisible(page), 'gh corner visible on result');
     await page.screenshot({ path: SHOTS+`${n}-result.png`, fullPage:true });
     { const H = await page.evaluate(() => document.documentElement.scrollHeight); let k = 1;
       for (let y = 0; ; y += 700) { await page.evaluate(y => scrollTo(0, y), y); await page.waitForTimeout(250);

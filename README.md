@@ -6,7 +6,8 @@
 一个移动端 H5 小测验：用两个维度把人放进四个象限——**你习惯思考追问，还是享受当下？你此刻真实的感受，是痛苦还是快乐？**
 测完告诉你「你现在是谁」「你想成为谁」，并给出几条温和、具体的建议，帮你更接近自己想要的样子。
 
-- 🌐 在线体验：<https://socrates-pig.000555.best>（规划中）
+- 🌐 在线体验：<https://socrates-pig.000555.best>
+- 💻 源码仓库：<https://github.com/GinWU05/socrates-pig>
 - 📦 单个 HTML 文件，内联 CSS / JS，**零依赖、无 CDN、可离线使用**
 
 <p align="center">
@@ -26,6 +27,7 @@
 - **返回导航**：每个页面 `history.pushState`，手机返回手势 / 浏览器后退按页面回退；第 1 题返回封面；顶栏「回首页」按钮，有答题进度时轻提示「退出后本次答题进度会丢失」
 - **固定配色**：唯一皮肤「深夜」靛紫；不跟随系统深浅色，阻止 Android Chrome 自动深色与 Dark Reader 等扩展改色（`color-scheme: only light`、`supported-color-schemes`、`darkreader-lock`）
 - **禁止缩放**：`maximum-scale=1, user-scalable=no`、`touch-action: manipulation`，并拦截 iOS 双指缩放 / 双击放大
+- **GitHub 角标**：封面和结果页右上角有一个低调的主题色章鱼猫角标（悬停时挥手），链接到源码仓库；答题页和弹窗中自动隐藏，不会进入结果图
 - **体验细节**：流畅动画且尊重 `prefers-reduced-motion`；适配刘海 / 底部安全区；无横向滚动；按钮有键盘焦点样式和 ARIA 标签
 
 <p align="center">
@@ -85,6 +87,7 @@ socrates-pig/
 需要 Node.js ≥ 18。
 
 ```bash
+git clone https://github.com/GinWU05/socrates-pig.git && cd socrates-pig
 npm install          # 只装 playwright-core（不下载浏览器）
 npm run build        # = node build.js，生成 dist/
 npm test             # 构建 + 测正式入口 + 结果图/防缩放 + 深色模式锁定
@@ -115,8 +118,9 @@ CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm t
 
 | 设置 | 值 |
 | --- | --- |
+| 连接仓库 | `GinWU05/socrates-pig`（连接后每次推送自动部署） |
 | Framework preset | None |
 | Build command | 留空（直接用已提交的 `dist/`）；也可以填 `node build.js` |
 | Build output directory | `dist` |
 
-自定义域名在 Pages 项目的 Custom domains 中绑定 `socrates-pig.000555.best`。`dist/archive/` 也会被部署（路径为 `/archive/`），但正式入口不会链接到它。
+线上地址 <https://socrates-pig.000555.best>（Pages 项目 Custom domains 中绑定）。`dist/archive/` 也会被部署（路径为 `/archive/`），但正式入口不会链接到它。
