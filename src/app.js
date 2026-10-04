@@ -530,17 +530,41 @@
     return drawPoster(rr0).then(function(cv){ return cv.toDataURL('image/png') });
   };
 
+  /* ---------- 保存方式（按浏览器环境） ----------
+     longpress：微信等 App 内置浏览器（含 iOS 上的非 Safari WebView）——不能下载、通常没有 navigator.share，只能长按图片保存
+     ios：iOS Safari / iOS Chrome 等——不用下载（会变成「文件」）；能分享文件就调系统分享（可选「存储图像」），否则长按
+     download：桌面、安卓浏览器——a[download] 下载 */
+  var UA = navigator.userAgent || '';
+  var IS_IOS = /iP(hone|od|ad)/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var IN_APP = /MicroMessenger|WeChat|FBAN|FBAV|FB_IAB|Instagram|Line\/|\bQQ\/|MQQBrowser|Weibo|DingTalk|Lark|Feishu|AlipayClient|Twitter|LinkedInApp|Snapchat|BytedanceWebview|aweme|NewsArticle|baiduboxapp|XiaoHongShu/i.test(UA)
+            || (IS_IOS && !/Safari\//.test(UA));
+  var SAVE_MODE = IN_APP ? 'longpress' : (IS_IOS ? 'ios' : 'download');
+  document.documentElement.setAttribute('data-save', SAVE_MODE);
+  var TIP = {
+    longpress: '长按图片保存到相册',
+    ios: '长按图片保存到相册；或点「保存图片」，在分享面板里选「存储图像」',
+    download: '长按图片可保存到相册，或直接发送给朋友'
+  };
+
+  // 结果图：弹窗里的 <img> 一律用 dataURL（各环境都能长按保存，也不产生 blob: 地址）；
+  // File 只用于 navigator.share；blob: 下载地址只在 download 模式下按需创建
   var poster = null, posterP = null;
   function prepPoster(){
     poster = null;
     var snap = lastResult;
     posterP = drawPoster(snap).then(function(cv){
-      return new Promise(function(res){ cv.toBlob ? cv.toBlob(function(b){ res({cv:cv,b:b}) }, 'image/png') : res({cv:cv,b:null}) });
+      var data = cv.toDataURL('image/png');
+      if(data.length > 9e6) data = cv.toDataURL('image/jpeg', .92); // 极端情况下退到高质量 JPEG（二维码仍清晰）
+      return new Promise(function(res){
+        if(!cv.toBlob || SAVE_MODE === 'longpress') return res({data:data, b:null});
+        cv.toBlob(function(b){ res({data:data, b:b}) }, 'image/png');
+      });
     }).then(function(o){
       if(snap!==lastResult) return poster;
-      var url = o.b ? URL.createObjectURL(o.b) : o.cv.toDataURL('image/png');
       var file = null; try{ if(o.b && typeof File==='function') file = new File([o.b], '苏格拉底还是猪-测试结果.png', {type:'image/png'}) }catch(_){}
-      poster = {url:url, file:file};
+      var dl = null;
+      if(SAVE_MODE === 'download') dl = (o.b && window.URL && URL.createObjectURL) ? URL.createObjectURL(o.b) : o.data;
+      poster = {url:o.data, file:file, dl:dl};
       return poster;
     });
     posterP.catch(function(err){ console.warn('poster', err) });
@@ -555,34 +579,41 @@
   function onShare(){ if(lastResult) openModal() }
   // 弹窗按钮：支持文件分享 → 「分享」主按钮 +「保存图片」次按钮；否则只有「保存图片」
   function setShareButtons(p){
-    var can = !!p && canShareFile(p.file), sb = $('nativeShareBtn'), sv = $('saveBtn');
+    var can = SAVE_MODE !== 'longpress' && !!p && canShareFile(p.file), sb = $('nativeShareBtn'), sv = $('saveBtn');
     sb.hidden = !can; sb.disabled = !p;
     sv.classList.toggle('ghost', can);
+    // 只有 download 模式才是真正的下载链接；其它模式去掉 href/download，点了不会触发下载
+    if(SAVE_MODE === 'download' && p && p.dl){ sv.setAttribute('href', p.dl); sv.setAttribute('download', '苏格拉底还是猪-测试结果.png') }
+    else { sv.removeAttribute('href'); sv.removeAttribute('download'); sv.setAttribute('role', 'button'); sv.setAttribute('tabindex', '0') }
+  }
+  function flashHint(){
+    var t = $('shareTip'); t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash');
+    toast(SAVE_MODE === 'longpress' ? '请长按上方图片，选择「保存图片」' : '请长按上方图片，选择「存储到“照片”」');
   }
   // 「分享」：必须在点击处理里同步调用 navigator.share（iOS Safari 需要用户激活），PNG 已在打开弹窗前/时预生成
   function onNativeShare(){
-    if(!poster || !canShareFile(poster.file)){ $('saveBtn').click(); return }
+    if(SAVE_MODE === 'longpress' || !poster || !canShareFile(poster.file)){ $('saveBtn').click(); return }
     var pr;
     try{ pr = shareNative(poster) }catch(e){ shareFail(e); return }
     if(pr && pr.catch) pr.catch(shareFail);
   }
   function shareFail(e){
     if(e && e.name==='AbortError') return; // 用户取消，静默
-    console.warn('share', e); toast('分享没成功，请长按图片保存，或点「保存图片」');
+    console.warn('share', e); toast(SAVE_MODE === 'download' ? '分享没成功，请长按图片保存，或点「保存图片」' : '分享没成功，请长按图片保存到相册');
   }
   var lastFocus = null;
   function openModal(){
     var m = $('shareModal'), img = $('posterImg');
     lastFocus = document.activeElement;
     img.removeAttribute('src'); img.classList.add('loading');
-    setShareButtons(null); $('nativeShareBtn').hidden = !(navigator.share && navigator.canShare);
+    setShareButtons(null); $('nativeShareBtn').hidden = SAVE_MODE === 'longpress' || !(navigator.share && navigator.canShare);
+    $('shareTip').textContent = TIP[SAVE_MODE];
     m.classList.add('open'); $('closeShare').focus();
     hset('result', true, true);
     (poster ? Promise.resolve(poster) : (posterP || prepPoster())).then(function(p){
       if(!p) throw new Error('no poster');
       img.onload = function(){ if(img.naturalWidth) img.style.aspectRatio = img.naturalWidth + ' / ' + img.naturalHeight };
       img.src = p.url; img.classList.remove('loading');
-      $('saveBtn').href = p.url;
       setShareButtons(p);
     }).catch(function(err){ console.warn(err); toast('结果图生成失败，请直接截图'); closeShare() });
   }
@@ -592,7 +623,15 @@
     if(!noHist && hstate().m){ expectPop++; history.back() }
     if(lastFocus && lastFocus.focus) try{ lastFocus.focus({preventScroll:true}) }catch(_){}
   }
-  $('saveBtn').addEventListener('click', function(e){ if(!poster){ e.preventDefault(); return } toast('已开始保存；若无反应，请长按图片保存') });
+  $('saveBtn').addEventListener('click', function(e){
+    if(!poster){ e.preventDefault(); return }
+    if(SAVE_MODE === 'download'){ toast('已开始保存；若无反应，请长按图片保存'); return }
+    e.preventDefault();
+    // iOS Safari：调系统分享（必须在点击里同步调用），用户可选「存储图像」；不支持就提示长按
+    if(SAVE_MODE === 'ios' && canShareFile(poster.file)){ var pr; try{ pr = shareNative(poster) }catch(err){ shareFail(err); return } if(pr && pr.catch) pr.catch(shareFail); return }
+    flashHint();
+  });
+  $('saveBtn').addEventListener('keydown', function(e){ if((e.key === 'Enter' || e.key === ' ') && !this.hasAttribute('href')){ e.preventDefault(); this.click() } });
 
   $('shareBtn').addEventListener('click', onShare);
   $('nativeShareBtn').addEventListener('click', onNativeShare);
@@ -652,7 +691,7 @@
   document.addEventListener('touchend', function(e){
     var now = Date.now(), t = e.target;
     // 快速连点非交互区域时阻止双击缩放；按钮/链接上不拦截，保证连续答题点击不丢
-    if(now - lastTouchEnd < 320 && !(t.closest && t.closest('button,a,input,select,textarea,label,[role="tab"]'))) e.preventDefault();
+    if(now - lastTouchEnd < 320 && !(t.closest && t.closest('button,a,input,select,textarea,label,[role="tab"],img.poster'))) e.preventDefault();
     lastTouchEnd = now;
   }, {passive:false});
   document.addEventListener('dblclick', function(e){ e.preventDefault() }, {passive:false});

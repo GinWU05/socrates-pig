@@ -368,3 +368,11 @@ body[data-screen="quiz"] .gh-corner,.modal.open~.gh-corner,.confirm.open~.gh-cor
 
 /* 页脚构建版本（git 短哈希，构建时写入）：极小、低对比 */
 .ver{margin:0;font:500 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;color:var(--ink-3);opacity:.6;text-align:center;-webkit-user-select:text;user-select:text}
+
+/* 保存提示：微信等内置浏览器只能长按保存，提示更醒目；点「保存图片」时闪一下 */
+html[data-save="longpress"] .modal .tip{font-size:15px;font-weight:700;color:var(--ink)}
+html[data-save="longpress"] .modal .tip::before{content:"👆 "}
+.modal .tip.flash{animation:tipflash .9s var(--ease) 2}
+@keyframes tipflash{0%,100%{color:inherit;transform:none}40%{color:var(--acc-2);transform:scale(1.06)}}
+.modal .poster{-webkit-user-select:auto;pointer-events:auto}
+a.btn:not([href]){cursor:pointer}
