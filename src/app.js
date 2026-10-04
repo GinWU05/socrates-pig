@@ -548,12 +548,26 @@
 
   // 结果图：弹窗里的 <img> 一律用 dataURL（各环境都能长按保存，也不产生 blob: 地址）；
   // File 只用于 navigator.share；blob: 下载地址只在 download 模式下按需创建
+  // 手机预览图：JPEG + 必要时缩小，控制 dataURL 体积（微信 iOS 对超大 base64 图片可能不给长按保存菜单）。
+  // 目标 < 800KB；最窄 750px（二维码模块仍 ≥ 5.5px，实测 zxing 与微信识别引擎都能解出）
+  var PREVIEW_MAX = 800 * 1024;
+  function previewJpeg(cv){
+    var url = cv.toDataURL('image/jpeg', .88);
+    [900, 750].forEach(function(w){
+      if(url.length <= PREVIEW_MAX || cv.width <= w) return;
+      var s = document.createElement('canvas'); s.width = w; s.height = Math.round(cv.height * w / cv.width);
+      var c = s.getContext('2d'); c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
+      c.drawImage(cv, 0, 0, s.width, s.height);
+      url = s.toDataURL('image/jpeg', .88);
+    });
+    return url;
+  }
   var poster = null, posterP = null;
   function prepPoster(){
     poster = null;
     var snap = lastResult;
     posterP = drawPoster(snap).then(function(cv){
-      var data = cv.toDataURL('image/png');
+      var data = SAVE_MODE === 'download' ? cv.toDataURL('image/png') : previewJpeg(cv);
       if(data.length > 9e6) data = cv.toDataURL('image/jpeg', .92); // 极端情况下退到高质量 JPEG（二维码仍清晰）
       return new Promise(function(res){
         if(!cv.toBlob || SAVE_MODE === 'longpress') return res({data:data, b:null});
@@ -607,7 +621,8 @@
     lastFocus = document.activeElement;
     img.removeAttribute('src'); img.classList.add('loading');
     setShareButtons(null); $('nativeShareBtn').hidden = SAVE_MODE === 'longpress' || !(navigator.share && navigator.canShare);
-    $('shareTip').textContent = TIP[SAVE_MODE];
+    $('shareTip').textContent = TIP[SAVE_MODE]; $('shareTip2').hidden = SAVE_MODE !== 'longpress';
+    img.draggable = false; img.setAttribute('draggable', 'false');
     m.classList.add('open'); $('closeShare').focus();
     hset('result', true, true);
     (poster ? Promise.resolve(poster) : (posterP || prepPoster())).then(function(p){
@@ -684,17 +699,19 @@
   hset(current, false);
 
   /* ---------- 禁止页面缩放（iOS Safari 会忽略 user-scalable=no，需要事件兜底） ---------- */
-  ['gesturestart','gesturechange','gestureend'].forEach(function(t){ document.addEventListener(t, function(e){ e.preventDefault() }, {passive:false}) });
-  document.addEventListener('touchmove', function(e){ if(e.touches && e.touches.length > 1) e.preventDefault() }, {passive:false});
-  document.addEventListener('touchstart', function(e){ if(e.touches && e.touches.length > 1) e.preventDefault() }, {passive:false});
+  // 结果图预览区（#posterBox）里的事件一律不拦截，保证长按图片能弹出保存菜单
+  function inPreview(e){ var t = e.target; return !!(t && t.closest && t.closest('#posterBox')) }
+  ['gesturestart','gesturechange','gestureend'].forEach(function(t){ document.addEventListener(t, function(e){ if(!inPreview(e)) e.preventDefault() }, {passive:false}) });
+  document.addEventListener('touchmove', function(e){ if(e.touches && e.touches.length > 1 && !inPreview(e)) e.preventDefault() }, {passive:false});
+  document.addEventListener('touchstart', function(e){ if(e.touches && e.touches.length > 1 && !inPreview(e)) e.preventDefault() }, {passive:false});
   var lastTouchEnd = 0;
   document.addEventListener('touchend', function(e){
     var now = Date.now(), t = e.target;
     // 快速连点非交互区域时阻止双击缩放；按钮/链接上不拦截，保证连续答题点击不丢
-    if(now - lastTouchEnd < 320 && !(t.closest && t.closest('button,a,input,select,textarea,label,[role="tab"],img.poster'))) e.preventDefault();
+    if(now - lastTouchEnd < 320 && !inPreview(e) && !(t.closest && t.closest('button,a,input,select,textarea,label,[role="tab"]'))) e.preventDefault();
     lastTouchEnd = now;
   }, {passive:false});
-  document.addEventListener('dblclick', function(e){ e.preventDefault() }, {passive:false});
+  document.addEventListener('dblclick', function(e){ if(!inPreview(e)) e.preventDefault() }, {passive:false});
   $('startBtn').addEventListener('click', function(){ start('full') });
   $('speedBtn').addEventListener('click', function(){ start('speed') });
   $('fullBtn').addEventListener('click', function(){ start('full') });

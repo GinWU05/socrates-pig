@@ -187,8 +187,9 @@
 <div class="modal" id="shareModal" role="dialog" aria-modal="true" aria-label="结果图">
   <button class="iconbtn close" id="closeShare" aria-label="关闭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   <div class="sheet">
-    <div class="posterbox"><img class="poster loading" id="posterImg" alt="测试结果图"></div>
+    <div class="posterbox" id="posterBox"><img class="poster loading" id="posterImg" alt="测试结果图" draggable="false"></div>
     <p class="tip" id="shareTip" role="status">长按图片可保存到相册，或直接发送给朋友</p>
+    <p class="tip2" id="shareTip2" hidden>若长按无反应，可截图保存</p>
     <div class="row">
       <button class="btn" id="nativeShareBtn" type="button" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>分享</button>

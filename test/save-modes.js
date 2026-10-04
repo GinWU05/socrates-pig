@@ -2,10 +2,10 @@
 //  (a) iPhone 微信内置浏览器 → 弹窗是 dataURL 的 <img>、显示「长按图片保存到相册」、不下载、全程不产生 blob: 地址、不调分享
 //  (b) iOS Safari（桩 navigator.share/canShare）→ 点「保存图片」调用 share 且带一个 PNG File、不下载；无 canShare 时只提示长按
 //  (c) 桌面 Chrome → 触发真实下载
-// 用法：node test/save-modes.js [url]   截图到 shots/wechat/，导出的图供 scripts/qr-decode.py 解码
+// 用法：node test/save-modes.js [url]   截图到 shots/wechat2/（可用 SP_SHOTS 改目录），导出的图供 scripts/qr-decode.py 解码
 const { chromium } = require('playwright-core'); const fs = require('fs');
 const { launch, fileUrl, shotsDir } = require('./env');
-const URL = process.argv[2] || fileUrl('dist/index.html'), OUT = shotsDir('wechat');
+const URL = process.argv[2] || fileUrl('dist/index.html'), OUT = shotsDir(process.env.SP_SHOTS || 'wechat2');
 const UA = {
   wechat: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003133) NetType/WIFI Language/zh_CN',
   safari: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
@@ -61,10 +61,54 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
     await p.screenshot({ path: OUT + 'cover.png' });
     await toModal(p);
     const src = await p.getAttribute('#posterImg', 'src');
-    ok(/^data:image\/(png|jpeg);base64,/.test(src), `preview <img> src is a data: URL (${src.slice(0, 22)}…, ${(src.length / 1e6).toFixed(1)}MB)`);
+    ok(/^data:image\/jpeg;base64,/.test(src), `preview <img> src is a JPEG data: URL (${src.slice(0, 23)}…)`);
+    ok(src.length < 1.1e6, `preview dataURL small enough: ${src.length} chars (${(src.length / 1024).toFixed(0)} KB)`);
+    const dims = await p.$eval('#posterImg', i => [i.naturalWidth, i.naturalHeight]); console.log('  preview image', dims.join('x'));
+    // 防止 iOS 图片拖拽浮起 + 保证长按菜单：draggable=false、-webkit-user-drag:none、图片和容器无 transform/filter/动画、弹窗不用 backdrop-filter
+    const lp = await p.evaluate(() => {
+      const i = document.getElementById('posterImg'), box = document.getElementById('posterBox'), sheet = i.closest('.sheet'), modal = document.getElementById('shareModal');
+      const cs = e => getComputedStyle(e);
+      const anc = []; for (let e = i.parentElement; e; e = e.parentElement) anc.push({ tag: e.tagName.toLowerCase() + (e.id ? '#' + e.id : e.className ? '.' + String(e.className).split(' ')[0] : ''), us: cs(e).userSelect, callout: cs(e).webkitTouchCallout });
+      return { draggableProp: i.draggable, draggableAttr: i.getAttribute('draggable'), userDrag: cs(i).webkitUserDrag, imgUserSelect: cs(i).userSelect,
+        imgT: cs(i).transform, imgF: cs(i).filter, imgAnim: cs(i).animationName, boxT: cs(box).transform, boxF: cs(box).filter, sheetT: cs(sheet).transform,
+        modalBackdrop: cs(modal).backdropFilter || cs(modal).webkitBackdropFilter || 'none', display: cs(i).display, width: i.style.width || cs(i).width, ancestors: anc };
+    });
+    ok(lp.draggableProp === false && lp.draggableAttr === 'false', `img draggable=false (prop ${lp.draggableProp}, attr ${lp.draggableAttr})`);
+    ok(lp.userDrag === 'none', `img -webkit-user-drag: ${lp.userDrag}`);
+    ok(lp.imgT === 'none' && lp.imgF === 'none' && lp.imgAnim === 'none' && lp.boxT === 'none' && lp.boxF === 'none' && lp.sheetT === 'none', `no transform/filter/animation on img/container/sheet ${JSON.stringify({ i: lp.imgT, f: lp.imgF, a: lp.imgAnim, b: lp.boxT, bf: lp.boxF, s: lp.sheetT })}`);
+    ok(lp.modalBackdrop === 'none', `modal backdrop-filter: ${lp.modalBackdrop}`);
+    ok(lp.display === 'block', 'img display:block, width 100%, height auto');
+    ok(lp.imgUserSelect !== 'none', `img user-select: ${lp.imgUserSelect}`);
+    // Chromium 不计算 -webkit-touch-callout：若能计算，图片与所有祖先都不能是 none；否则检查页面 CSS 源码
+    const calloutComputable = lp.ancestors.some(a => a.callout !== undefined);
+    if (calloutComputable) ok(lp.ancestors.every(a => a.callout !== 'none'), 'touch-callout not none on img ancestors');
+    const css = await p.evaluate(() => [...document.querySelectorAll('style')].map(s => s.textContent).join('\n'));
+    ok(!/touch-callout\s*:\s*none/.test(css), 'no -webkit-touch-callout:none anywhere in page CSS');
+    ok(/\.modal \.poster\{[^}]*-webkit-touch-callout:default/.test(css) && /\.modal \.posterbox\{-webkit-touch-callout:default\}/.test(css), 'img and its wrapper explicitly -webkit-touch-callout:default');
+    // 全站禁止文字选择；输入控件可选可输入
+    const sel = await p.evaluate(() => { const inp = document.createElement('input'), ta = document.createElement('textarea'); document.body.append(inp, ta);
+      const r = { body: getComputedStyle(document.body).userSelect, html: getComputedStyle(document.documentElement).userSelect, tip: getComputedStyle(document.getElementById('shareTip')).userSelect,
+        title: getComputedStyle(document.getElementById('rTitle')).userSelect, input: getComputedStyle(inp).userSelect, textarea: getComputedStyle(ta).userSelect }; inp.remove(); ta.remove(); return r });
+    ok(sel.body === 'none' && sel.html === 'none' && sel.tip === 'none' && sel.title === 'none', `site-wide text selection disabled ${JSON.stringify(sel)}`);
+    ok(sel.input === 'text' && sel.textarea === 'text', 'input/textarea stay selectable (user-select:text)');
+    // 预览区内的触摸 / 手势 / 双击事件不会被 preventDefault（单指、双指、快速连点都试）
+    const pd = await p.evaluate(() => { const i = document.getElementById('posterImg');
+      const T = id => new Touch({ identifier: id, target: i, clientX: 100 + id, clientY: 200 });
+      const fire = (type, touches) => { const e = new TouchEvent(type, { cancelable: true, bubbles: true, touches, targetTouches: touches, changedTouches: touches }); i.dispatchEvent(e); return e.defaultPrevented };
+      const r = { start1: fire('touchstart', [T(1)]), start2: fire('touchstart', [T(1), T(2)]), move2: fire('touchmove', [T(1), T(2)]), end: fire('touchend', []), end2: fire('touchend', []) };
+      const g = new Event('gesturestart', { cancelable: true, bubbles: true }); i.dispatchEvent(g); r.gesture = g.defaultPrevented;
+      const d = new MouseEvent('dblclick', { cancelable: true, bubbles: true }); i.dispatchEvent(d); r.dblclick = d.defaultPrevented;
+      const c = new MouseEvent('contextmenu', { cancelable: true, bubbles: true }); i.dispatchEvent(c); r.contextmenu = c.defaultPrevented;
+      const ds = new DragEvent('dragstart', { cancelable: true, bubbles: true }); i.dispatchEvent(ds); r.dragstart = ds.defaultPrevented;
+      // 对照：预览区外双指仍会被拦截（防缩放没被破坏）
+      const o = new TouchEvent('touchstart', { cancelable: true, bubbles: true, touches: [new Touch({ identifier: 9, target: document.body, clientX: 5, clientY: 5 }), new Touch({ identifier: 8, target: document.body, clientX: 9, clientY: 9 })] }); document.body.dispatchEvent(o); r.outsidePinchBlocked = o.defaultPrevented;
+      return r });
+    ok(Object.entries(pd).every(([k, v]) => k === 'outsidePinchBlocked' ? v === true : v === false), `events on preview img not prevented ${JSON.stringify(pd)}`);
     ok(await vis(p, '#posterImg'), 'preview image visible');
     const tip = await p.textContent('#shareTip');
     ok(tip.includes('长按图片保存到相册') && await vis(p, '#shareTip'), `hint visible: 「${tip}」`);
+    const tip2 = await p.textContent('#shareTip2');
+    ok(tip2.includes('若长按无反应，可截图保存') && await vis(p, '#shareTip2'), `secondary hint visible: 「${tip2}」`);
     ok(!(await vis(p, '#nativeShareBtn')), '「分享」 hidden in WeChat');
     const press = await p.evaluate(() => { const i = document.getElementById('posterImg'), r = i.getBoundingClientRect(), cs = getComputedStyle(i);
       const top = document.elementFromPoint(r.left + r.width / 2, Math.min(r.top + r.height / 2, innerHeight / 2));
@@ -84,7 +128,7 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
       loaded: performance.getEntriesByType('resource').some(r => /^blob:/.test(r.name)),
       attrs: [...document.querySelectorAll('[src],[href]')].some(e => /^blob:/.test(e.getAttribute('src') || e.getAttribute('href') || '')) }));
     ok(blob.created === 0 && !blob.inDom && !blob.attrs, `no blob: URL anywhere ${JSON.stringify(blob)}`);
-    await saveDataUrl(p, OUT + 'wechat-img.png');
+    await saveDataUrl(p, OUT + 'wechat-preview.jpg');
     // 页脚截图（结果页最底部）
     await p.click('#closeShare'); await p.waitForTimeout(400);
     await p.evaluate(() => scrollTo(0, document.documentElement.scrollHeight)); await p.waitForTimeout(300);
@@ -106,6 +150,7 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
     ok(await p.evaluate(() => document.documentElement.dataset.save) === 'ios', 'detected save mode = ios');
     await toModal(p);
     ok(/^data:image\//.test(await p.getAttribute('#posterImg', 'src')), 'preview <img> src is a data: URL');
+    ok(!(await vis(p, '#shareTip2')), 'secondary screenshot hint only in WeChat-type browsers');
     ok(await p.getAttribute('#saveBtn', 'href') === null, '保存图片 is not a download link');
     const n = await p.evaluate(() => { document.getElementById('saveBtn').click(); return window.__shareCalls.length });
     ok(n === 1, `保存图片 -> navigator.share called synchronously (${n})`);

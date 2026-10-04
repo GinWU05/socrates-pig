@@ -367,12 +367,26 @@ body[data-screen="quiz"] .gh-corner,.modal.open~.gh-corner,.confirm.open~.gh-cor
 @media print{.gh-corner{display:none}}
 
 /* 页脚构建版本（git 短哈希，构建时写入）：极小、低对比 */
-.ver{margin:0;font:500 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;color:var(--ink-3);opacity:.6;text-align:center;-webkit-user-select:text;user-select:text}
+.ver{margin:0;font:500 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;color:var(--ink-3);opacity:.6;text-align:center}
 
 /* 保存提示：微信等内置浏览器只能长按保存，提示更醒目；点「保存图片」时闪一下 */
 html[data-save="longpress"] .modal .tip{font-size:15px;font-weight:700;color:var(--ink)}
 html[data-save="longpress"] .modal .tip::before{content:"👆 "}
 .modal .tip.flash{animation:tipflash .9s var(--ease) 2}
 @keyframes tipflash{0%,100%{color:inherit;transform:none}40%{color:var(--acc-2);transform:scale(1.06)}}
-.modal .poster{-webkit-user-select:auto;pointer-events:auto}
 a.btn:not([href]){cursor:pointer}
+
+/* 全站禁止文字选择（含长按选字）；输入控件除外。注意：不在全局关闭长按菜单（callout 保持默认） */
+html,body,*{-webkit-user-select:none;user-select:none}
+input,textarea,[contenteditable],[contenteditable] *{-webkit-user-select:text;user-select:text}
+
+/* 结果图预览：保证 iOS / 微信长按出「保存图片」菜单，而不是图片拖拽浮起 */
+.modal .posterbox{-webkit-touch-callout:default}
+.modal .poster{display:block;width:100%;height:auto;-webkit-touch-callout:default;-webkit-user-drag:none;user-drag:none;
+  -webkit-user-select:auto;user-select:auto;pointer-events:auto;transform:none;filter:none;animation:none}
+.modal .poster.loading{animation:shimmer 1.2s ease-in-out infinite alternate}
+.posterbox{-webkit-overflow-scrolling:auto}
+/* 手机（非下载）模式：弹窗不用毛玻璃、面板不做位移动画，避免图片处在合成层/变换层里导致长按命中失败 */
+html:not([data-save="download"]) .modal{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(8,6,16,.94)}
+html:not([data-save="download"]) .modal .sheet,html:not([data-save="download"]) .modal.open .sheet{transform:none;transition:none}
+.modal .tip2{margin:-6px 0 0;font-size:12px;color:var(--ink-3);text-align:center;flex:none}
