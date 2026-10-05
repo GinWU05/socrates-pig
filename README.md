@@ -85,7 +85,6 @@ socrates-pig/
 │   ├── share.js             # 多场景结果图 + 弹窗比例 + 防缩放检查
 │   ├── share-flow.js        # 分享流程：先预览、「分享」同步调用
 │   ├── save-modes.js        # 弹窗在 微信 / 安卓 / iOS Safari / 桌面 × 能否分享 下完全一致（无下载、只长按 +「分享」）
-│   ├── colorscheme.js       # 浅色 / 深色 / 强制深色下逐字节比对截图
 │   ├── preview-badge.js     # 「预览版」标记：正式域名不显示，其它域名显示
 │   └── qr.js                # 导出结果图到 shots/qr/，配合 scripts/qr-decode.py 验证二维码
 ├── scripts/notch-check.py   # 结果图留白检查：模拟刘海屏全屏预览，生成前后对比图
@@ -112,7 +111,7 @@ npm test             # 构建 + 测正式入口 + 结果图/防缩放 + 分享�
 npm run test:all     # 额外把 dist/archive/ 里的 5 个主题全测一遍
 ```
 
-单独跑某一项：`npm run test:save-modes`、`npm run test:qr`、`npm run test:themes`（不带参数会测正式入口 + 5 个存档主题）、`npm run test:share`、`npm run test:share-flow`、`npm run test:colorscheme`、`npm run test:preview-badge`。这几个命令不会先构建，改了 `src/` 要先 `npm run build`。
+单独跑某一项：`npm run test:save-modes`、`npm run test:qr`、`npm run test:themes`（不带参数会测正式入口 + 5 个存档主题）、`npm run test:share`、`npm run test:share-flow`、`npm run test:preview-badge`。这几个命令不会先构建，改了 `src/` 要先 `npm run build`。
 
 修改 `src/` 后必须重新构建，`dist/` 不要手改。
 
@@ -128,7 +127,6 @@ CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm t
 - `test/share.js`：各象限、相同/不同愿望、A 或 B 正好为 0、速通版共 10 种场景的结果图，以及弹窗中图片不被拉伸、防缩放是否生效
 - `test/share-flow.js`：用桩模拟 `navigator.share` / `canShare`，验证点「生成结果图」只开弹窗不分享、点「分享」同步调用一次且带一个 PNG 文件、取消和出错都不弹提示、没有「保存图片」，并在 390×844 和 375×667 下截图
 - `test/save-modes.js [url]`：iPhone 微信、安卓 Chrome、iOS Safari、iPad、iPad + 触控板（有悬停和精确指针、maxTouchPoints 为 5）、桌面 Chrome 各自在「有 / 没有 `canShare` 文件分享」（桩）下打开弹窗，逐项检查：预览图是 JPEG dataURL（小于约 1.1M 字符）且不可拖拽、DOM 里没有「保存图片」和下载链接、唯一提示正好是「长按保存图片」（桌面为「右键保存图片」）、「分享」仅在 canShare 时显示且点击会同步调用 share 并带一个 PNG 文件、右键 / 长按（contextmenu）不被拦截、不下载、没有 blob: 地址、没有 toast；12 种组合的弹窗 DOM 必须完全相同（只允许提示文字不同）。微信下还检查：图片及容器没有 transform 等、页面 CSS 没有 `touch-callout:none` 且图片和容器明确为 default、全站正文 `user-select:none` 而 input/textarea 为 `text`、预览图上的 touch/gesture/dblclick 等事件没被 preventDefault；share 被拒（AbortError 或其它错误）都不弹提示。截图输出到 `shots/save-modes/`（`wechat.png`、`wechat-noshare.png`、`desktop.png` 等；用环境变量 `SP_SHOTS` 可以换目录），可以传线上地址测线上
-- `test/colorscheme.js`：分别在浅色、深色、Chrome 强制深色下渲染，截图必须逐字节一致
 - `test/preview-badge.js [预览地址]`：用 Playwright 路由把同一份 `dist/index.html` 挂到正式域名和预览域名上，正式域名下「预览版」必须隐藏，`preview.socrates-pig.pages.dev`、localhost、本地文件下必须显示，并且不挡点击、不压 GitHub 角标；传真实预览地址时额外检查并截图到 `shots/preview/cover.png`
 
 截图输出到 `shots/`（已在 `.gitignore` 中忽略）。

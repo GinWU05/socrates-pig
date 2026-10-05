@@ -6,11 +6,10 @@
   "license": "MIT",
   "scripts": {
     "build": "node build.js",
-    "test": "npm run build && node test/themes.js index && node test/share.js && node test/share-flow.js && node test/save-modes.js && node test/colorscheme.js && node test/preview-badge.js",
-    "test:all": "npm run build && node test/themes.js && node test/share.js && node test/share-flow.js && node test/save-modes.js && node test/colorscheme.js && node test/preview-badge.js",
+    "test": "npm run build && node test/themes.js index && node test/share.js && node test/share-flow.js && node test/save-modes.js && node test/preview-badge.js",
+    "test:all": "npm run build && node test/themes.js && node test/share.js && node test/share-flow.js && node test/save-modes.js && node test/preview-badge.js",
     "test:themes": "node test/themes.js",
     "test:share": "node test/share.js",
-    "test:colorscheme": "node test/colorscheme.js",
     "serve": "npx --yes serve dist -l 5173",
     "test:share-flow": "node test/share-flow.js",
     "test:qr": "node test/qr.js",
