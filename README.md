@@ -107,7 +107,7 @@ socrates-pig/
 git clone https://github.com/GinWU05/socrates-pig.git && cd socrates-pig
 npm install          # 只装 playwright-core（不下载浏览器）
 npm run build        # = node build.js，生成 dist/
-npm test             # 构建 + 测正式入口 + 结果图/防缩放 + 分享流程 + 各环境保存方式 + 深色模式锁定 + 预览版标记
+npm test             # 构建 + 测正式入口 + 结果图/防缩放 + 分享流程 + 各环境保存方式 + 预览版标记
 npm run test:all     # 额外把 dist/archive/ 里的 5 个主题全测一遍
 ```
 
