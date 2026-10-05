@@ -6,9 +6,12 @@ const QRCode = require('qrcode');
 const SITE = 'https://socrates-pig.000555.best';
 const qr = QRCode.create(SITE, { errorCorrectionLevel: 'M' });
 const QR = { url: SITE, n: qr.modules.size, d: Array.from(qr.modules.data, b => b ? 1 : 0).join('') };
-// 页脚版本：当前 git 提交短哈希（构建时自动写入，不手写）；不在 git 仓库时用 SP_COMMIT，否则 'dev'
+// 页脚版本：构建所用源码提交的短哈希（构建时自动写入，不手写）
+// Cloudflare Pages 连 Git 构建时用 CF_PAGES_COMMIT_SHA；本地用 git describe（工作区有未提交改动时带 -dirty）；
+// 不在 git 仓库时用 SP_COMMIT，否则 'dev'
 const COMMIT = (() => {
-  try { return execSync('git rev-parse --short HEAD', { cwd: __dirname, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch (_) {}
+  if (process.env.CF_PAGES_COMMIT_SHA) return process.env.CF_PAGES_COMMIT_SHA.slice(0, 7);
+  try { return execSync('git describe --always --dirty --abbrev=7', { cwd: __dirname, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim() } catch (_) {}
   return process.env.SP_COMMIT || 'dev';
 })();
 if (!/^[\w.-]+$/.test(COMMIT)) throw new Error('bad commit id: ' + COMMIT);

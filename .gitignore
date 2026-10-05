@@ -1,6 +1,9 @@
 # 依赖
 node_modules/
 
+# 构建产物（Cloudflare Pages 连 Git 构建时生成，不提交）
+dist/
+
 # 测试截图（npm test 生成；README 用图放在 docs/）
 shots/
 

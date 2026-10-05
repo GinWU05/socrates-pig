@@ -30,7 +30,7 @@
   - 系统分享在点击里同步调用 `navigator.share`（PNG File 打开弹窗时就已生成），满足 iOS 的用户手势要求。结果图上下各留一段背景（上 ≈ 0.174×宽、下 ≈ 0.256×宽），在刘海 / 灵动岛 iPhone 上全屏查看时，内容不会被状态栏和 Home 指示条挡住
 - **禁止选字**：全站 `user-select:none`（含长按选字），只有 input / textarea / contenteditable 保持可选可输入；不在全局关闭长按菜单，结果预览图单独设为 `-webkit-touch-callout:default` 和 `-webkit-user-select:auto`，长按仍能弹出「保存图片」
 - **结果图二维码**：结果图底部「来测测看」旁有一个指向 <https://socrates-pig.000555.best> 的二维码（版本 3、纠错等级 M、29×29 模块、每模块 8px、四周 4 模块白色静区，纯黑配纯白），可在微信里长按识别。矩阵在构建时由 `qrcode` 生成并内联进页面，运行时不依赖任何库
-- **构建版本**：封面和结果页最底部有一行很淡的 `build <提交短哈希>`，由 `build.js` 在构建时通过 `git rev-parse --short HEAD` 自动写入（不在 git 仓库时用环境变量 `SP_COMMIT`，再没有就显示 `dev`）。如果构建产物 `dist/` 在源码提交之后单独提交，页面上显示的是源码那次提交的哈希
+- **构建版本**：封面和结果页最底部有一行很淡的 `build <提交短哈希>`，由 `build.js` 在构建时自动写入：Cloudflare Pages 构建时取 `CF_PAGES_COMMIT_SHA` 的前 7 位，本地构建用 `git describe --always --dirty`（工作区有未提交改动时显示 `<哈希>-dirty`），不在 git 仓库时用环境变量 `SP_COMMIT`，再没有就显示 `dev`。`dist/` 不提交，所以页面上的哈希就是 GitHub 上那次源码提交
 - **返回导航**：答题页左上角的返回箭头回到上一题，第 1 题时回到封面；右上角的房子图标（「回到首页」），已有答题进度时先确认「退出后本次答题进度会丢失」；结果页底部有「回到首页」。浏览器历史按「封面 → 答题/结果 → 结果图弹窗」三层记录（`history.pushState` / `popstate`），所以手机返回手势和浏览器后退会：先关掉结果图弹窗；答题中有进度时弹出退出确认（再按一次返回 = 取消）；没有进度或在结果页时回到封面。返回手势不会逐题后退
 - **固定配色**：唯一皮肤「深夜」靛紫；不跟随系统深浅色，阻止 Android Chrome 自动深色与 Dark Reader 等扩展改色（`color-scheme: only light`、`supported-color-schemes`、`darkreader-lock`）
 - **禁止缩放**：`maximum-scale=1, user-scalable=no`、`touch-action: manipulation`，并拦截 iOS 双指缩放 / 双击放大
@@ -70,7 +70,7 @@
 
 ```
 socrates-pig/
-├── dist/                    # 构建产物（已提交，可直接部署）
+├── dist/                    # 构建产物（不提交，.gitignore 已忽略；Cloudflare Pages 构建时生成）
 │   ├── index.html           # 正式入口 = 主题 1「深夜」，自包含单文件
 │   └── archive/             # 存档：5 个主题 + themes.html 选择页（正式入口不链接）
 ├── src/                     # 唯一源码（不能直接打开，需要构建）
@@ -154,27 +154,31 @@ python scripts/notch-check.py 旧图.png 新图.png 对比图.png
 
 ## 部署（Cloudflare Pages：先预览，确认后再上线）
 
-Pages 项目 `socrates-pig` 用 wrangler 直接上传 `dist/`（Direct Upload，**没有连接 Git**，推送代码不会自动部署）。生产分支是 `main`。
+Pages 项目 `socrates-pig` **连接 GitHub 仓库自动构建**，本机不出产物、不手动上传。项目设置：
 
-| 环境 | 地址 | 部署命令 |
+| 设置 | 值 |
+| --- | --- |
+| Production branch | `main` |
+| Preview branches | 包含 `preview`（其它分支也可以开，地址为 `<分支名>.socrates-pig.pages.dev`） |
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+| Node 版本 | 由仓库根目录 `.node-version`（22）指定 |
+
+| 环境 | 地址 | 触发方式 |
 | --- | --- | --- |
-| 预览 | 固定地址 <https://preview.socrates-pig.pages.dev>（总是最新一次预览部署）；每次部署另有一个固定不变的 `https://<部署ID>.socrates-pig.pages.dev` | `npm run deploy:preview`（`--branch preview`） |
-| 正式 | <https://socrates-pig.000555.best>（Custom domains 中绑定；对应 Pages 地址 socrates-pig.pages.dev） | `npm run deploy:prod`（`--branch main`） |
+| 预览 | 固定地址 <https://preview.socrates-pig.pages.dev>（总是 `preview` 分支最新一次构建）；每次构建另有一个固定不变的 `https://<部署ID>.socrates-pig.pages.dev` | 推送到 `preview` 分支 |
+| 正式 | <https://socrates-pig.000555.best>（Custom domains 中绑定；对应 Pages 地址 socrates-pig.pages.dev） | 推送到 `main` 分支 |
 
-页面在运行时判断域名：只要不是 `socrates-pig.000555.best`（预览地址、localhost、本地文件），页面顶部居中就会显示黄色的「预览版」标记。所以同一份 `dist/` 可以先上预览、确认后原样上正式，不用重新构建。这个标记只在页面上，不会画进结果图。
+页面在运行时判断域名：只要不是 `socrates-pig.000555.best`（预览地址、localhost、本地文件），页面顶部居中就会显示黄色的「预览版」标记。这个标记只在页面上，不会画进结果图。
 
 每次改动的流程：
 
 1. 改源码 → `npm test` 全部通过 → 提交源码（中文说明）。
-2. `node build.js`（页脚 `build <哈希>` 自动写成刚才的源码提交）→ 单独提交 `dist/`：`build: 重新构建 dist（页脚哈希为源码提交）` → `git push`（普通推送，不强推）。
-3. 部署预览：`npm run deploy:preview`，即
-   `npx -y wrangler pages deploy dist --project-name socrates-pig --branch preview --commit-dirty=false`
-4. 在手机上（包括微信里）打开 <https://preview.socrates-pig.pages.dev> 测试：页脚哈希是新的，有「预览版」标记。可以用 `node test/save-modes.js https://preview.socrates-pig.pages.dev/` 测预览站。
-5. 确认说「上线」后，**用同一份 dist、不重新构建**，部署正式：`npm run deploy:prod`，即
-   `npx -y wrangler pages deploy dist --project-name socrates-pig --branch main --commit-dirty=false`
-   然后检查正式站页脚哈希、没有「预览版」标记。
+2. 推到预览分支：`git push origin HEAD:preview`（`preview` 分支只跟着 `main` 快进，不在上面单独提交）。
+3. 等 Cloudflare 构建完成，在手机上（包括微信里）打开 <https://preview.socrates-pig.pages.dev> 测试：页脚哈希等于刚才的提交，有「预览版」标记。可以用 `node test/save-modes.js https://preview.socrates-pig.pages.dev/` 测预览站。
+4. 确认说「上线」后推送 `main`：`git push origin main`。因为 `preview` 和 `main` 指向同一个提交，正式站的页脚哈希和预览站一致。然后检查正式站页脚哈希、没有「预览版」标记。
 
-用 `npx -y wrangler pages deployment list --project-name socrates-pig` 可以看每次部署对应的环境（Production / Preview）和分支。
+构建日志和每次部署对应的环境（Production / Preview）、分支、提交，在 Cloudflare 后台 Pages 项目的 Deployments 里看，也可以用 `npx -y wrangler pages deployment list --project-name socrates-pig`。
 
 `dist/archive/` 也会一起部署（例如 `/archive/themes.html`），但正式入口不链接到它。
 

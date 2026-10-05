@@ -15,9 +15,7 @@
     "test:share-flow": "node test/share-flow.js",
     "test:qr": "node test/qr.js",
     "test:save-modes": "node test/save-modes.js",
-    "test:preview-badge": "node test/preview-badge.js",
-    "deploy:preview": "npx -y wrangler pages deploy dist --project-name socrates-pig --branch preview --commit-dirty=false",
-    "deploy:prod": "npx -y wrangler pages deploy dist --project-name socrates-pig --branch main --commit-dirty=false"
+    "test:preview-badge": "node test/preview-badge.js"
   },
   "devDependencies": {
     "playwright-core": "^1.63.0",
