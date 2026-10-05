@@ -83,7 +83,7 @@ socrates-pig/
 │   ├── env.js               # 公共配置：路径、Chrome 位置
 │   ├── themes.js            # 全流程点测 + 截图
 │   ├── share.js             # 多场景结果图 + 弹窗比例 + 防缩放检查
-│   ├── share-flow.js        # 分享流程：先预览、「分享」同步调用、无文件分享时只显示保存
+│   ├── share-flow.js        # 分享流程：先预览、「分享」同步调用
 │   ├── save-modes.js        # 弹窗在 微信 / 安卓 / iOS Safari / 桌面 × 能否分享 下完全一致（无下载、只长按 +「分享」）
 │   ├── colorscheme.js       # 浅色 / 深色 / 强制深色下逐字节比对截图
 │   ├── preview-badge.js     # 「预览版」标记：正式域名不显示，其它域名显示
@@ -126,7 +126,7 @@ CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm t
 
 - `test/themes.js [index|1-dark|…]`：走完整版和速通版，检查四个象限都能到达、「想成为」文案、建议条数、维度图坐标、分享弹窗、返回 / 回首页 / 浏览器后退、确认弹窗、控制台无报错
 - `test/share.js`：各象限、相同/不同愿望、A 或 B 正好为 0、速通版共 10 种场景的结果图，以及弹窗中图片不被拉伸、防缩放是否生效
-- `test/share-flow.js`：用桩模拟 `navigator.share` / `canShare`，验证点「生成结果图」只开弹窗不分享、点「分享」同步调用一次且带一个 PNG 文件、取消和出错都不弹提示、没有「保存图片」、无文件分享时没有按钮只有提示，并在 390×844 和 375×667 下截图
+- `test/share-flow.js`：用桩模拟 `navigator.share` / `canShare`，验证点「生成结果图」只开弹窗不分享、点「分享」同步调用一次且带一个 PNG 文件、取消和出错都不弹提示、没有「保存图片」，并在 390×844 和 375×667 下截图
 - `test/save-modes.js [url]`：iPhone 微信、安卓 Chrome、iOS Safari、iPad、iPad + 触控板（有悬停和精确指针、maxTouchPoints 为 5）、桌面 Chrome 各自在「有 / 没有 `canShare` 文件分享」（桩）下打开弹窗，逐项检查：预览图是 JPEG dataURL（小于约 1.1M 字符）且不可拖拽、DOM 里没有「保存图片」和下载链接、唯一提示正好是「长按保存图片」（桌面为「右键保存图片」）、「分享」仅在 canShare 时显示且点击会同步调用 share 并带一个 PNG 文件、右键 / 长按（contextmenu）不被拦截、不下载、没有 blob: 地址、没有 toast；12 种组合的弹窗 DOM 必须完全相同（只允许提示文字不同）。微信下还检查：图片及容器没有 transform 等、页面 CSS 没有 `touch-callout:none` 且图片和容器明确为 default、全站正文 `user-select:none` 而 input/textarea 为 `text`、预览图上的 touch/gesture/dblclick 等事件没被 preventDefault；share 被拒（AbortError 或其它错误）都不弹提示。截图输出到 `shots/save-modes/`（`wechat.png`、`wechat-noshare.png`、`desktop.png` 等；用环境变量 `SP_SHOTS` 可以换目录），可以传线上地址测线上
 - `test/colorscheme.js`：分别在浅色、深色、Chrome 强制深色下渲染，截图必须逐字节一致
 - `test/preview-badge.js [预览地址]`：用 Playwright 路由把同一份 `dist/index.html` 挂到正式域名和预览域名上，正式域名下「预览版」必须隐藏，`preview.socrates-pig.pages.dev`、localhost、本地文件下必须显示，并且不挡点击、不压 GitHub 角标；传真实预览地址时额外检查并截图到 `shots/preview/cover.png`

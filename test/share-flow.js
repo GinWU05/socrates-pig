@@ -91,19 +91,6 @@ async function page(b, vp, mode){
       ok(!(await p.$eval('#shareModal', e => e.classList.contains('open'))), `${tag} close button closes modal`);
       ok(errs.filter(e => !/share/.test(e)).length === 0, `${tag} no console errors ${errs.join(' | ')}`);
       await ctx.close(); }
-
-    // ---- (c) 不支持文件分享：没有按钮，只有提示 ----
-    { const { ctx, p, errs } = await page(b, vp, null);
-      await toResult(p);
-      ok(await p.evaluate(() => !(navigator.share && navigator.canShare)), `${tag} (c) env has no file share`);
-      await openPreview(p);
-      ok(!(await vis(p, '#nativeShareBtn')), `${tag} (c) 分享 hidden`);
-      ok(await p.$('#saveBtn') === null && await p.$('a[download]') === null, `${tag} (c) no 保存图片 / download link`);
-      const fit = await p.evaluate(() => { const r = document.getElementById('shareTip').getBoundingClientRect(); return r.height > 0 && r.bottom <= innerHeight && r.top >= 0 });
-      ok(fit && (await p.textContent('#shareTip')).trim() === '长按保存图片', `${tag} (c) hint 「长按保存图片」 fully on screen`);
-      await p.screenshot({ path: OUT + `${tag}-modal-noshare.png` });
-      ok(errs.length === 0, `${tag} no console errors ${errs.join(' | ')}`);
-      await ctx.close(); }
   }
   await b.close();
   console.log(fails ? `FAILS: ${fails}` : 'ALL PASS');
