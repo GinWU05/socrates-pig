@@ -1,5 +1,8 @@
 (function(){
   'use strict';
+  // 预览版标记：只有正式域名不显示（pages.dev 预览、本地文件、localhost 都显示）
+  var PROD_HOST = 'socrates-pig.000555.best';
+  try{ var pb = document.getElementById('previewBadge'); if(pb) pb.hidden = location.hostname === PROD_HOST }catch(_){}
   /* ================= DATA =================
    * 轴 A（a）：+ 苏格拉底（思考追问） / − 猪（享受当下）
    * 轴 B（b）：+ 快乐 / − 痛苦（真实感受）
@@ -531,8 +534,9 @@
   };
 
   /* ---------- 保存方式（按浏览器环境） ----------
-     longpress：微信等 App 内置浏览器（含 iOS 上的非 Safari WebView）——不能下载、通常没有 navigator.share，只能长按图片保存
-     ios：iOS Safari / iOS Chrome 等——不用下载（会变成「文件」）；能分享文件就调系统分享（可选「存储图像」），否则长按
+     UA 只决定「保存图片」能不能下载；「分享」按钮一律按功能检测（navigator.canShare({files:[PNG File]})）显示，微信里也一样。
+     longpress：微信等 App 内置浏览器（含 iOS 上的非 Safari WebView）——不下载（下载只会变成「文件」），「保存图片」提示长按
+     ios：iOS Safari / iOS Chrome 等——不用下载；能分享文件就调系统分享（可选「存储图像」），否则长按
      download：桌面、安卓浏览器——a[download] 下载 */
   var UA = navigator.userAgent || '';
   var IS_IOS = /iP(hone|od|ad)/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -545,9 +549,10 @@
     ios: '长按图片保存到相册；或点「保存图片」，在分享面板里选「存储图像」',
     download: '长按图片可保存到相册，或直接发送给朋友'
   };
+  var TIP_SHARE = '长按图片保存到相册，或点「分享」';
 
   // 结果图：弹窗里的 <img> 一律用 dataURL（各环境都能长按保存，也不产生 blob: 地址）；
-  // File 只用于 navigator.share；blob: 下载地址只在 download 模式下按需创建
+  // File 只用于 navigator.share（打开弹窗时预生成，点击时才能同步调用 share）；blob: 下载地址只在 download 模式下按需创建
   // 手机预览图：JPEG + 必要时缩小，控制 dataURL 体积（微信 iOS 对超大 base64 图片可能不给长按保存菜单）。
   // 目标 < 800KB；最窄 750px（二维码模块仍 ≥ 5.5px，实测 zxing 与微信识别引擎都能解出）
   var PREVIEW_MAX = 800 * 1024;
@@ -570,7 +575,8 @@
       var data = SAVE_MODE === 'download' ? cv.toDataURL('image/png') : previewJpeg(cv);
       if(data.length > 9e6) data = cv.toDataURL('image/jpeg', .92); // 极端情况下退到高质量 JPEG（二维码仍清晰）
       return new Promise(function(res){
-        if(!cv.toBlob || SAVE_MODE === 'longpress') return res({data:data, b:null});
+        // App 内置浏览器：只有支持 navigator.share/canShare 时才生成 PNG（用于分享），否则不必浪费时间
+        if(!cv.toBlob || (SAVE_MODE === 'longpress' && !(navigator.share && navigator.canShare))) return res({data:data, b:null});
         cv.toBlob(function(b){ res({data:data, b:b}) }, 'image/png');
       });
     }).then(function(o){
@@ -593,9 +599,10 @@
   function onShare(){ if(lastResult) openModal() }
   // 弹窗按钮：支持文件分享 → 「分享」主按钮 +「保存图片」次按钮；否则只有「保存图片」
   function setShareButtons(p){
-    var can = SAVE_MODE !== 'longpress' && !!p && canShareFile(p.file), sb = $('nativeShareBtn'), sv = $('saveBtn');
+    var can = !!p && canShareFile(p.file), sb = $('nativeShareBtn'), sv = $('saveBtn');
     sb.hidden = !can; sb.disabled = !p;
     sv.classList.toggle('ghost', can);
+    if(p) $('shareTip').textContent = (SAVE_MODE === 'longpress' && can) ? TIP_SHARE : TIP[SAVE_MODE];
     // 只有 download 模式才是真正的下载链接；其它模式去掉 href/download，点了不会触发下载
     if(SAVE_MODE === 'download' && p && p.dl){ sv.setAttribute('href', p.dl); sv.setAttribute('download', '苏格拉底还是猪-测试结果.png') }
     else { sv.removeAttribute('href'); sv.removeAttribute('download'); sv.setAttribute('role', 'button'); sv.setAttribute('tabindex', '0') }
@@ -606,21 +613,23 @@
   }
   // 「分享」：必须在点击处理里同步调用 navigator.share（iOS Safari 需要用户激活），PNG 已在打开弹窗前/时预生成
   function onNativeShare(){
-    if(SAVE_MODE === 'longpress' || !poster || !canShareFile(poster.file)){ $('saveBtn').click(); return }
+    if(!poster || !canShareFile(poster.file)){ flashHint(); return }
     var pr;
     try{ pr = shareNative(poster) }catch(e){ shareFail(e); return }
     if(pr && pr.catch) pr.catch(shareFail);
   }
   function shareFail(e){
     if(e && e.name==='AbortError') return; // 用户取消，静默
-    console.warn('share', e); toast(SAVE_MODE === 'download' ? '分享没成功，请长按图片保存，或点「保存图片」' : '分享没成功，请长按图片保存到相册');
+    console.warn('share', e);
+    var t = $('shareTip'); t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash');
+    toast(SAVE_MODE === 'download' ? '分享没成功，请长按图片保存，或点「保存图片」' : '分享没成功，请长按图片保存到相册');
   }
   var lastFocus = null;
   function openModal(){
     var m = $('shareModal'), img = $('posterImg');
     lastFocus = document.activeElement;
     img.removeAttribute('src'); img.classList.add('loading');
-    setShareButtons(null); $('nativeShareBtn').hidden = SAVE_MODE === 'longpress' || !(navigator.share && navigator.canShare);
+    setShareButtons(null); $('nativeShareBtn').hidden = !(navigator.share && navigator.canShare);
     $('shareTip').textContent = TIP[SAVE_MODE]; $('shareTip2').hidden = SAVE_MODE !== 'longpress';
     img.draggable = false; img.setAttribute('draggable', 'false');
     m.classList.add('open'); $('closeShare').focus();

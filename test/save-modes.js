@@ -1,11 +1,13 @@
 // 「保存图片」按浏览器环境的行为：
-//  (a) iPhone 微信内置浏览器 → 弹窗是 dataURL 的 <img>、显示「长按图片保存到相册」、不下载、全程不产生 blob: 地址、不调分享
+//  (a) iPhone 微信内置浏览器 → 弹窗是 JPEG dataURL 的 <img>、显示长按提示、「保存图片」不下载、全程不产生 blob: 地址；
+//      「分享」按功能检测：canShare({files}) 为真 → 显示并调用 share（带 PNG File）；不支持 → 隐藏、只提示长按；
+//      share 被拒：AbortError 静默，其它错误 → 长按提示
 //  (b) iOS Safari（桩 navigator.share/canShare）→ 点「保存图片」调用 share 且带一个 PNG File、不下载；无 canShare 时只提示长按
 //  (c) 桌面 Chrome → 触发真实下载
-// 用法：node test/save-modes.js [url]   截图到 shots/wechat2/（可用 SP_SHOTS 改目录），导出的图供 scripts/qr-decode.py 解码
+// 用法：node test/save-modes.js [url]   截图到 shots/wechat3/（可用 SP_SHOTS 改目录），导出的图供 scripts/qr-decode.py 解码
 const { chromium } = require('playwright-core'); const fs = require('fs');
 const { launch, fileUrl, shotsDir } = require('./env');
-const URL = process.argv[2] || fileUrl('dist/index.html'), OUT = shotsDir(process.env.SP_SHOTS || 'wechat2');
+const URL = process.argv[2] || fileUrl('dist/index.html'), OUT = shotsDir(process.env.SP_SHOTS || 'wechat3');
 const UA = {
   wechat: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003133) NetType/WIFI Language/zh_CN',
   safari: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
@@ -20,19 +22,20 @@ function init(opt){
   URL.createObjectURL = o => { const u = orig(o); window.__blobUrls.push(u); return u };
   window.__shareCalls = [];
   if (opt.share) {
-    Object.defineProperty(Navigator.prototype, 'canShare', { configurable: true, value: d => !!(d && d.files && d.files.length && d.files.every(f => f instanceof File)) });
+    // opt.noFiles：有 share 但 canShare 不接受文件；opt.shareErr：share 以该名字的 DOMException 拒绝
+    Object.defineProperty(Navigator.prototype, 'canShare', { configurable: true, value: d => !opt.noFiles && !!(d && d.files && d.files.length && d.files.every(f => f instanceof File)) });
     Object.defineProperty(Navigator.prototype, 'share', { configurable: true, value: d => {
-      window.__shareCalls.push({ n: d.files ? d.files.length : 0, isFile: !!(d.files && d.files[0] instanceof File), type: d.files && d.files[0] && d.files[0].type, size: d.files && d.files[0] && d.files[0].size });
-      return Promise.resolve(); } });
+      window.__shareCalls.push({ n: d.files ? d.files.length : 0, isFile: !!(d.files && d.files[0] instanceof File), type: d.files && d.files[0] && d.files[0].type, size: d.files && d.files[0] && d.files[0].size, name: d.files && d.files[0] && d.files[0].name });
+      return opt.shareErr ? Promise.reject(new DOMException('stub', opt.shareErr)) : Promise.resolve(); } });
   } else {
     // 微信 / 旧版 iOS：没有 navigator.share
     try { delete Navigator.prototype.share; delete Navigator.prototype.canShare } catch (_) {}
   }
 }
 
-async function open(b, { ua, mobile, share, vp = { width: 390, height: 844 } }){
+async function open(b, { ua, mobile, share, noFiles = false, shareErr = null, vp = { width: 390, height: 844 } }){
   const ctx = await b.newContext({ viewport: vp, deviceScaleFactor: mobile ? 3 : 1, isMobile: mobile, hasTouch: mobile, userAgent: ua, reducedMotion: 'reduce', acceptDownloads: true });
-  await ctx.addInitScript(init, { share });
+  await ctx.addInitScript(init, { share, noFiles, shareErr });
   const p = await ctx.newPage(); const errs = [], downloads = [];
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()) });
   p.on('download', d => downloads.push(d));
@@ -55,7 +58,7 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
 
   // ---------- (a) iPhone 微信 ----------
   console.log('== (a) iPhone WeChat');
-  { // 装上 share 桩：即使环境「有」share，微信模式下也不能用它
+  { // 微信 + 支持文件分享（桩 canShare 为真）：「分享」可见并可用；「保存图片」仍不下载、只提示长按
     const { ctx, p, errs, downloads } = await open(b, { ua: UA.wechat, mobile: true, share: true });
     ok(await p.evaluate(() => document.documentElement.dataset.save) === 'longpress', 'detected save mode = longpress');
     await p.screenshot({ path: OUT + 'cover.png' });
@@ -106,10 +109,10 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
     ok(Object.entries(pd).every(([k, v]) => k === 'outsidePinchBlocked' ? v === true : v === false), `events on preview img not prevented ${JSON.stringify(pd)}`);
     ok(await vis(p, '#posterImg'), 'preview image visible');
     const tip = await p.textContent('#shareTip');
-    ok(tip.includes('长按图片保存到相册') && await vis(p, '#shareTip'), `hint visible: 「${tip}」`);
+    ok(tip.includes('长按图片保存到相册') && tip.includes('分享') && await vis(p, '#shareTip'), `hint visible (mentions 分享): 「${tip}」`);
     const tip2 = await p.textContent('#shareTip2');
     ok(tip2.includes('若长按无反应，可截图保存') && await vis(p, '#shareTip2'), `secondary hint visible: 「${tip2}」`);
-    ok(!(await vis(p, '#nativeShareBtn')), '「分享」 hidden in WeChat');
+    ok(await vis(p, '#nativeShareBtn') && !(await p.$eval('#nativeShareBtn', e => e.disabled)), '「分享」 visible & enabled in WeChat when canShare({files}) is true');
     const press = await p.evaluate(() => { const i = document.getElementById('posterImg'), r = i.getBoundingClientRect(), cs = getComputedStyle(i);
       const top = document.elementFromPoint(r.left + r.width / 2, Math.min(r.top + r.height / 2, innerHeight / 2));
       return { pe: cs.pointerEvents, callout: cs.webkitTouchCallout || '(n/a)', us: cs.userSelect || cs.webkitUserSelect, topIsImg: top === i, drag: i.draggable } });
@@ -121,7 +124,14 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
     await p.tap('#saveBtn'); await p.waitForTimeout(1500);
     ok(downloads.length === 0, `no download event (${downloads.length})`);
     ok(await p.$eval('#toast', e => e.classList.contains('show') && /长按/.test(e.textContent)), 'tap 保存图片 -> long-press hint toast');
-    ok(await p.evaluate(() => window.__shareCalls.length) === 0, 'navigator.share never called');
+    ok(await p.evaluate(() => window.__shareCalls.length) === 0, '保存图片 does not call navigator.share in WeChat');
+    // 点「分享」：在点击处理里同步调用 navigator.share，带一个 PNG File；不下载
+    const n = await p.evaluate(() => { document.getElementById('nativeShareBtn').click(); return window.__shareCalls.length });
+    ok(n === 1, `分享 -> navigator.share called synchronously in click (${n})`);
+    const c = await p.evaluate(() => window.__shareCalls[0]);
+    ok(c && c.n === 1 && c.isFile && c.type === 'image/png' && /\.png$/.test(c.name) && c.size > 10000, `share got one PNG File ${JSON.stringify(c)}`);
+    await p.waitForTimeout(800);
+    ok(downloads.length === 0, 'no download after 分享');
     const blob = await p.evaluate(() => ({ created: window.__blobUrls.length,
       // DOM 里（去掉内联脚本源码后）是否出现 blob:；以及是否加载过 blob: 资源
       inDom: (() => { const d = document.documentElement.cloneNode(true); d.querySelectorAll('script').forEach(s => s.remove()); return /blob:(https?:|null\/|file:)/.test(d.outerHTML) })(), // 真正的 blob 地址形如 blob:<origin>/<uuid>（CSS 变量 --blob: 不算）
@@ -136,6 +146,37 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
     const ver = await p.$$eval('.ver', es => es.map(e => e.textContent)); console.log('  footer:', ver.join(' | '));
     ok(errs.length === 0, 'no console errors ' + errs.join(' | '));
     await ctx.close();
+  }
+  { // 微信 + 没有 navigator.share：「分享」隐藏，只提示长按，「保存图片」不下载
+    const { ctx, p, errs, downloads } = await open(b, { ua: UA.wechat, mobile: true, share: false });
+    await toModal(p);
+    ok(/^data:image\/jpeg;base64,/.test(await p.getAttribute('#posterImg', 'src')), 'no-share: preview still JPEG data: URL');
+    ok(!(await vis(p, '#nativeShareBtn')), 'no-share: 「分享」 hidden');
+    const tip = await p.textContent('#shareTip');
+    ok(tip.includes('长按图片保存到相册') && !tip.includes('分享') && await vis(p, '#shareTip') && await vis(p, '#shareTip2'), `no-share: long-press hints visible 「${tip}」`);
+    await p.screenshot({ path: OUT + 'modal-noshare.png' });
+    await p.tap('#saveBtn'); await p.waitForTimeout(1200);
+    ok(downloads.length === 0 && await p.$eval('#toast', e => e.classList.contains('show') && /长按/.test(e.textContent)), 'no-share: 保存图片 -> long-press toast, no download');
+    ok(await p.evaluate(() => window.__blobUrls.length) === 0, 'no-share: no blob: URL created');
+    ok(errs.length === 0, 'no-share: no console errors ' + errs.join(' | '));
+    await ctx.close();
+  }
+  { // 微信 + 有 share 但 canShare 不接受文件：「分享」隐藏
+    const { ctx, p } = await open(b, { ua: UA.wechat, mobile: true, share: true, noFiles: true });
+    await toModal(p);
+    ok(!(await vis(p, '#nativeShareBtn')), 'canShare({files}) false: 「分享」 hidden');
+    await ctx.close();
+  }
+  { // share 被拒：AbortError（用户取消）静默；其它错误 → 长按提示
+    for (const [err, expectToast] of [['AbortError', false], ['NotAllowedError', true]]) {
+      const { ctx, p, downloads } = await open(b, { ua: UA.wechat, mobile: true, share: true, shareErr: err });
+      await toModal(p);
+      await p.evaluate(() => document.getElementById('nativeShareBtn').click()); await p.waitForTimeout(600);
+      const t = await p.$eval('#toast', e => e.classList.contains('show') ? e.textContent : '');
+      ok(expectToast ? /长按/.test(t) : t === '', `share rejects ${err} -> ${expectToast ? 'long-press toast' : 'silent'} 「${t}」`);
+      ok(downloads.length === 0, `share rejects ${err} -> no download`);
+      await ctx.close();
+    }
   }
   { // 375x667 也看一下排版
     const { ctx, p } = await open(b, { ua: UA.wechat, mobile: true, share: false, vp: { width: 375, height: 667 } });
