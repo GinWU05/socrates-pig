@@ -369,8 +369,8 @@ body[data-screen="quiz"] .gh-corner,.modal.open~.gh-corner,.confirm.open~.gh-cor
 /* 页脚构建版本（git 短哈希，构建时写入）：极小、低对比 */
 .ver{margin:0;font:500 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;color:var(--ink-3);opacity:.6;text-align:center}
 
-/* 手机上的唯一提示「长按保存图片」：醒目一点 */
-html:not([data-save="download"]) .modal .tip{font-size:15px;font-weight:700;color:var(--ink)}
+/* 弹窗里唯一的提示「长按保存图片」：醒目一点（所有浏览器相同） */
+.modal .tip{font-size:15px;font-weight:700;color:var(--ink)}
 a.btn:not([href]){cursor:pointer}
 
 /* 全站禁止文字选择（含长按选字）；输入控件除外。注意：不在全局关闭长按菜单（callout 保持默认） */
@@ -383,9 +383,9 @@ input,textarea,[contenteditable],[contenteditable] *{-webkit-user-select:text;us
   -webkit-user-select:auto;user-select:auto;pointer-events:auto;transform:none;filter:none;animation:none}
 .modal .poster.loading{animation:shimmer 1.2s ease-in-out infinite alternate}
 .posterbox{-webkit-overflow-scrolling:auto}
-/* 手机（非下载）模式：弹窗不用毛玻璃、面板不做位移动画，避免图片处在合成层/变换层里导致长按命中失败 */
-html:not([data-save="download"]) .modal{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(8,6,16,.94)}
-html:not([data-save="download"]) .modal .sheet,html:not([data-save="download"]) .modal.open .sheet{transform:none;transition:none}
+/* 弹窗（所有浏览器）：不用毛玻璃、面板不做位移动画，避免图片处在合成层/变换层里导致长按命中失败 */
+.modal{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(8,6,16,.94)}
+.modal .sheet,.modal.open .sheet{transform:none;transition:none}
 
 /* 预览版标记：顶部居中的小药丸（落在页面顶部留白里，不压返回键 / 标题），高对比；不挡点击（pointer-events:none），远离右上角 GitHub 角标 */
 .preview-badge{position:fixed;z-index:60;top:calc(1px + var(--sat));left:50%;transform:translateX(-50%);padding:0 8px;border-radius:999px;

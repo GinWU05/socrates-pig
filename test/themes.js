@@ -67,8 +67,9 @@ async function share(page, file){
     const b64 = await page.evaluate(async () => { const r = await fetch(document.getElementById('posterImg').src); const b = await r.blob(); return await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result.split(',')[1]); fr.readAsDataURL(b) }) });
     fs.writeFileSync(file, Buffer.from(b64,'base64'));
   }
-  const href = await page.getAttribute('#saveBtn','href'); ok(href.startsWith('blob:') || href.startsWith('data:'), 'saveHref '+href);
-  const dl = await page.getAttribute('#saveBtn','download'); ok(!!dl, 'download attr');
+  ok(await page.$('#saveBtn') === null && await page.$('#shareModal a[download]') === null, 'no 保存图片 / download link in modal');
+  ok((await page.textContent('#shareTip')).trim() === '长按保存图片', 'hint 长按保存图片');
+  ok(/^data:image\/jpeg;base64,/.test(await page.getAttribute('#posterImg','src')), 'preview is JPEG data: URL');
   await page.click('#closeShare'); await page.waitForTimeout(450);
   ok(await page.$eval('#shareModal', e => !e.classList.contains('open')), 'modal closed');
   return 'canShare='+hasCanShare+' modal ok';

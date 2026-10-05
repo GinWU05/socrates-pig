@@ -1,4 +1,4 @@
-// 分享流程：「生成结果图」总是先开预览弹窗；弹窗内「分享」按钮同步调用 navigator.share；不支持时只有「保存图片」
+// 分享流程：「生成结果图」总是先开预览弹窗；弹窗内「分享」按钮同步调用 navigator.share；不支持时没有按钮，只有提示「长按保存图片」
 // 另含：返回手势关弹窗、GitHub 角标隐藏、390x844 / 375x667 弹窗与结果页截图
 const { chromium } = require('playwright-core');
 const { launch, fileUrl, shotsDir } = require('./env');
@@ -61,9 +61,8 @@ async function page(b, vp, mode){
       await openPreview(p);
       ok(await p.evaluate(() => window.__shareCalls.length) === 0, `${tag} (a) 生成结果图 opens modal, share NOT called`);
       ok(await p.$eval('#posterImg', e => e.tagName === 'IMG'), `${tag} preview is <img>`);
-      ok(!(await vis(p, '#shareTip')), `${tag} desktop (download mode): no long-press hint line`);
-      ok(await vis(p, '#nativeShareBtn') && await vis(p, '#saveBtn'), `${tag} 分享 + 保存图片 both shown`);
-      ok(!(await p.$eval('#nativeShareBtn', e => e.classList.contains('ghost'))) && await p.$eval('#saveBtn', e => e.classList.contains('ghost')), `${tag} 分享 primary, 保存图片 secondary`);
+      ok((await p.textContent('#shareTip')).trim() === '长按保存图片' && await vis(p, '#shareTip'), `${tag} hint 「长按保存图片」`);
+      ok(await vis(p, '#nativeShareBtn') && await p.$('#saveBtn') === null, `${tag} only 「分享」 (no 保存图片)`);
       ok(!(await ghVisible(p)), `${tag} GitHub corner hidden in modal`);
       await p.screenshot({ path: OUT + `${tag}-modal-share.png` });
       // (b) 点「分享」：在点击处理中同步调用一次 share，带一个 PNG File
@@ -93,18 +92,16 @@ async function page(b, vp, mode){
       ok(errs.filter(e => !/share/.test(e)).length === 0, `${tag} no console errors ${errs.join(' | ')}`);
       await ctx.close(); }
 
-    // ---- (c) 不支持文件分享：只有「保存图片」 ----
+    // ---- (c) 不支持文件分享：没有按钮，只有提示 ----
     { const { ctx, p, errs } = await page(b, vp, null);
       await toResult(p);
       ok(await p.evaluate(() => !(navigator.share && navigator.canShare)), `${tag} (c) env has no file share`);
       await openPreview(p);
       ok(!(await vis(p, '#nativeShareBtn')), `${tag} (c) 分享 hidden`);
-      ok(await vis(p, '#saveBtn') && !(await p.$eval('#saveBtn', e => e.classList.contains('ghost'))), `${tag} (c) only 保存图片, as primary`);
-      const href = await p.getAttribute('#saveBtn', 'href');
-      ok(/^(blob|data):/.test(href) && !!(await p.getAttribute('#saveBtn', 'download')), `${tag} (c) 保存图片 downloads the PNG`);
-      const fit = await p.evaluate(() => { const r = document.getElementById('saveBtn').getBoundingClientRect(); return r.bottom <= innerHeight && r.top >= 0 });
-      ok(fit, `${tag} save button fully on screen`);
-      await p.screenshot({ path: OUT + `${tag}-modal-save.png` });
+      ok(await p.$('#saveBtn') === null && await p.$('a[download]') === null, `${tag} (c) no 保存图片 / download link`);
+      const fit = await p.evaluate(() => { const r = document.getElementById('shareTip').getBoundingClientRect(); return r.height > 0 && r.bottom <= innerHeight && r.top >= 0 });
+      ok(fit && (await p.textContent('#shareTip')).trim() === '长按保存图片', `${tag} (c) hint 「长按保存图片」 fully on screen`);
+      await p.screenshot({ path: OUT + `${tag}-modal-noshare.png` });
       ok(errs.length === 0, `${tag} no console errors ${errs.join(' | ')}`);
       await ctx.close(); }
   }
