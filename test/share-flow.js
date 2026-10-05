@@ -61,7 +61,7 @@ async function page(b, vp, mode){
       await openPreview(p);
       ok(await p.evaluate(() => window.__shareCalls.length) === 0, `${tag} (a) 生成结果图 opens modal, share NOT called`);
       ok(await p.$eval('#posterImg', e => e.tagName === 'IMG'), `${tag} preview is <img>`);
-      ok((await p.textContent('#shareTip')).includes('长按图片可保存到相册'), `${tag} long-press hint present`);
+      ok(!(await vis(p, '#shareTip')), `${tag} desktop (download mode): no long-press hint line`);
       ok(await vis(p, '#nativeShareBtn') && await vis(p, '#saveBtn'), `${tag} 分享 + 保存图片 both shown`);
       ok(!(await p.$eval('#nativeShareBtn', e => e.classList.contains('ghost'))) && await p.$eval('#saveBtn', e => e.classList.contains('ghost')), `${tag} 分享 primary, 保存图片 secondary`);
       ok(!(await ghVisible(p)), `${tag} GitHub corner hidden in modal`);
@@ -77,11 +77,11 @@ async function page(b, vp, mode){
       const c2 = await p.evaluate(() => window.__shareCalls[1]);
       ok(!!c2 && c2.active !== false, `${tag} (b) tap -> share with user activation (${c2 && c2.active})`);
       ok(await p.evaluate(() => window.__shareCalls.length) === 2, `${tag} each tap shares exactly once`);
-      // AbortError 静默；其它错误 → toast
+      // AbortError 静默；其它错误也不弹 toast（不遮按钮）
       await p.evaluate(() => window.__shareMode = 'abort'); await p.tap('#nativeShareBtn'); await p.waitForTimeout(300);
       ok(!(await toastShown(p)), `${tag} AbortError silent (no toast)`);
       await p.evaluate(() => window.__shareMode = 'error'); await p.tap('#nativeShareBtn'); await p.waitForTimeout(300);
-      ok(await toastShown(p), `${tag} other share error -> toast fallback`);
+      ok(!(await toastShown(p)), `${tag} other share error -> no toast covering buttons`);
       ok(await p.$eval('#shareModal', e => e.classList.contains('open')), `${tag} modal stays open after share`);
       // 返回手势关闭弹窗，停在结果页
       await p.goBack(); await p.waitForTimeout(500);

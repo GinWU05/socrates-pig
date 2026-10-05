@@ -23,10 +23,10 @@
 - **四象限结果**：痛苦的苏格拉底 / 快乐的苏格拉底 / 痛苦的猪 / 快乐的猪，结果页显示「你现在是 X，你想成为 Y」
 - **维度图**：自绘 SVG 象限图（渐变象限、同心网格、刻度、呼吸光点、从「现在」指向「想成为」的虚线弧箭头、图例），可切换 4 轴雷达图（思考 / 享受 / 痛苦 / 快乐）；完整版答题时，顶栏的迷你象限会实时显示当前位置
 - **成长建议**：16 组内容——12 种 X → Y 的转变路径 + 4 种「保持现状」的健康建议，每组 3–4 条
-- **结果图分享**：canvas 绘制 1080 宽高清长图（含象限图、现在/想成为、建议；完整版另含两轴得分）。点「生成结果图」总是先打开预览弹窗，弹窗里的图片一律是 dataURL 的 `<img>`，任何浏览器都能长按保存。「分享」按钮一律按功能检测显示：打开弹窗时先生成 PNG File，`navigator.canShare({files:[file]})` 为真就显示「分享」并调用 `navigator.share`（微信里也一样）；不支持就隐藏，只提示长按。share 被拒时，AbortError（用户取消）不做任何事，其它错误提示长按保存。UA 只用来决定「保存图片」能不能下载：
-  - **微信等 App 内置浏览器**（UA 含 MicroMessenger、QQ、微博、钉钉、飞书、Facebook、Instagram 等，或 iOS 上不是 Safari 的 WebView）：不下载（在微信里下载只会变成「文件」，进不了相册），也不会用 a[download] 或 blob: 地址；提示「长按图片保存到相册」（能分享时为「长按图片保存到相册，或点「分享」」），下方再给一行「若长按无反应，可截图保存」，点「保存图片」只会闪一下提示。这时的预览图是 JPEG dataURL（质量 0.88，超过 800 KB 会依次缩到 900 / 750 宽），图片设为 `draggable=false`、`-webkit-user-drag:none`、`-webkit-touch-callout:default`；图片和外层容器都不加 transform / filter / 动画 / backdrop-filter，预览区里的触摸事件也不调用 `preventDefault`，免得 iPhone 微信长按变成拖动图片、不弹保存菜单
-  - **iOS Safari / iOS Chrome**：从不走下载。支持文件分享时，「保存图片」和「分享」都会调起系统分享面板（可选「存储图像」）；不支持时提示长按
-  - **桌面和安卓浏览器**：`a[download]` 直接下载 PNG
+- **结果图分享**：canvas 绘制 1080 宽高清长图（含象限图、现在/想成为、建议；完整版另含两轴得分）。点「生成结果图」总是先打开预览弹窗，弹窗里的图片一律是 dataURL 的 `<img>`，任何浏览器都能长按保存。弹窗文案只有一行提示「长按保存图片」（桌面不显示），不弹 toast、不闪烁，也不会盖住按钮。「分享」按钮一律按功能检测显示：打开弹窗时先生成 PNG File，`navigator.canShare({files:[file]})` 为真就显示「分享」并调用 `navigator.share`（微信、安卓里也一样），否则隐藏。share 被拒（用户取消或其它错误）都不弹提示。UA 只用来决定有没有「保存图片」按钮：
+  - **微信等 App 内置浏览器和所有安卓浏览器**（UA 含 MicroMessenger、QQ、微博、钉钉、飞书、Facebook、Instagram、Android 等，或 iOS 上不是 Safari 的 WebView）：没有「保存图片」按钮（微信里下载只会变成「文件」，安卓下载会进「下载」而不是相册），不用 a[download] 或 blob: 地址；只有「分享」（支持时）和提示「长按保存图片」。这时的预览图是 JPEG dataURL（质量 0.88，超过 800 KB 会依次缩到 900 / 750 宽），图片设为 `draggable=false`、`-webkit-user-drag:none`、`-webkit-touch-callout:default`；图片和外层容器都不加 transform / filter / 动画 / backdrop-filter，预览区里的触摸事件也不调用 `preventDefault`，免得 iPhone 微信长按变成拖动图片、不弹保存菜单
+  - **iOS Safari / iOS Chrome**：从不走下载。支持文件分享时，「保存图片」和「分享」都会调起系统分享面板（可选「存储图像」）；不支持时两个按钮都隐藏，只提示「长按保存图片」
+  - **桌面浏览器**：「保存图片」用 `a[download]` 直接下载 PNG
   - 系统分享在点击里同步调用 `navigator.share`（PNG 和 File 打开弹窗前就已生成），满足 iOS Safari 的用户手势要求。结果图上下各留一段背景（上 ≈ 0.174×宽、下 ≈ 0.256×宽），在刘海 / 灵动岛 iPhone 上全屏查看时，内容不会被状态栏和 Home 指示条挡住
 - **禁止选字**：全站 `user-select:none`（含长按选字），只有 input / textarea / contenteditable 保持可选可输入；不在全局关闭长按菜单，结果预览图单独设为 `-webkit-touch-callout:default` 和 `-webkit-user-select:auto`，长按仍能弹出「保存图片」
 - **结果图二维码**：结果图底部「来测测看」旁有一个指向 <https://socrates-pig.000555.best> 的二维码（版本 3、纠错等级 M、29×29 模块、每模块 8px、四周 4 模块白色静区，纯黑配纯白），可在微信里长按识别。矩阵在构建时由 `qrcode` 生成并内联进页面，运行时不依赖任何库
@@ -84,7 +84,7 @@ socrates-pig/
 │   ├── themes.js            # 全流程点测 + 截图
 │   ├── share.js             # 多场景结果图 + 弹窗比例 + 防缩放检查
 │   ├── share-flow.js        # 分享流程：先预览、「分享」同步调用、无文件分享时只显示保存
-│   ├── save-modes.js        # 「保存图片」按环境：iPhone 微信（不下载、无 blob:；能分享时显示「分享」，否则只长按）/ iOS Safari（系统分享）/ 桌面（下载）
+│   ├── save-modes.js        # 「保存图片」按环境：iPhone 微信 / 安卓（无「保存图片」、只长按 + 能分享时「分享」）/ iOS Safari（系统分享）/ 桌面（下载）
 │   ├── colorscheme.js       # 浅色 / 深色 / 强制深色下逐字节比对截图
 │   ├── preview-badge.js     # 「预览版」标记：正式域名不显示，其它域名显示
 │   └── qr.js                # 导出结果图到 shots/qr/，配合 scripts/qr-decode.py 验证二维码
@@ -127,7 +127,7 @@ CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm t
 - `test/themes.js [index|1-dark|…]`：走完整版和速通版，检查四个象限都能到达、「想成为」文案、建议条数、维度图坐标、分享弹窗、返回 / 回首页 / 浏览器后退、确认弹窗、控制台无报错
 - `test/share.js`：各象限、相同/不同愿望、A 或 B 正好为 0、速通版共 10 种场景的结果图，以及弹窗中图片不被拉伸、防缩放是否生效
 - `test/share-flow.js`：用桩模拟 `navigator.share` / `canShare`，验证点「生成结果图」只开弹窗不分享、点「分享」同步调用一次且带一个 PNG 文件、取消静默、出错提示、无文件分享时只有「保存图片」，并在 390×844 和 375×667 下截图
-- `test/save-modes.js [url]`：分别模拟 iPhone 微信、iOS Safari（桩 `navigator.share`）、桌面 Chrome。微信下预览图必须是 data: 地址、显示长按提示、「保存图片」不触发下载也不调用分享、页面里没有 blob: 地址；微信 + 桩 canShare 为真时「分享」可见，点击会同步调用 share 并带一个 PNG 文件；没有 share、或 canShare 不接受文件时「分享」隐藏；share 以 AbortError 拒绝时静默，其它错误时弹长按提示；iOS Safari 下「保存图片」会带着一个 PNG 文件调用分享；微信下还检查：预览图为 JPEG 且 dataURL 小于约 1.1M 字符、不可拖拽、图片及容器没有 transform 等、页面 CSS 没有 `touch-callout:none` 且图片和容器明确为 default、全站正文 `user-select:none` 而 input/textarea 为 `text`、预览图上的 touch/gesture/dblclick 等事件没被 preventDefault；桌面下触发真实下载。截图输出到 `shots/wechat3/`（`modal.png` 为微信里能分享的弹窗，`modal-noshare.png` 为不能分享的弹窗）（用环境变量 `SP_SHOTS` 可以换目录），可以传线上地址测线上
+- `test/save-modes.js [url]`：分别模拟 iPhone 微信、安卓 Chrome、iOS Safari（桩 `navigator.share` / `canShare`）、桌面 Chrome。微信和安卓：预览图是 JPEG dataURL（小于约 1.1M 字符）、没有「保存图片」、唯一提示正好是「长按保存图片」、任何点击后都没有 toast、不下载、没有 blob: 地址；「分享」仅在 canShare 文件时显示，点击会同步调用 share 并带一个 PNG 文件；share 被拒（AbortError 或其它错误）都不弹提示。微信下还检查：图片不可拖拽、图片及容器没有 transform 等、页面 CSS 没有 `touch-callout:none` 且图片和容器明确为 default、全站正文 `user-select:none` 而 input/textarea 为 `text`、预览图上的 touch/gesture/dblclick 等事件没被 preventDefault。iOS Safari 下「保存图片」会带着一个 PNG 文件调用分享，不支持时隐藏；桌面下触发真实下载、不显示提示。截图输出到 `shots/save-modes/`（`modal.png` 微信能分享、`modal-noshare.png` 微信不能分享、`android-modal.png`、`safari-modal.png`；用环境变量 `SP_SHOTS` 可以换目录），可以传线上地址测线上
 - `test/colorscheme.js`：分别在浅色、深色、Chrome 强制深色下渲染，截图必须逐字节一致
 - `test/preview-badge.js [预览地址]`：用 Playwright 路由把同一份 `dist/index.html` 挂到正式域名和预览域名上，正式域名下「预览版」必须隐藏，`preview.socrates-pig.pages.dev`、localhost、本地文件下必须显示，并且不挡点击、不压 GitHub 角标；传真实预览地址时额外检查并截图到 `shots/preview/cover.png`
 

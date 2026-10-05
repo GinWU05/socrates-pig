@@ -1,15 +1,16 @@
 // 「保存图片」按浏览器环境的行为：
-//  (a) iPhone 微信内置浏览器 → 弹窗是 JPEG dataURL 的 <img>、显示长按提示、「保存图片」不下载、全程不产生 blob: 地址；
-//      「分享」按功能检测：canShare({files}) 为真 → 显示并调用 share（带 PNG File）；不支持 → 隐藏、只提示长按；
-//      share 被拒：AbortError 静默，其它错误 → 长按提示
-//  (b) iOS Safari（桩 navigator.share/canShare）→ 点「保存图片」调用 share 且带一个 PNG File、不下载；无 canShare 时只提示长按
-//  (c) 桌面 Chrome → 触发真实下载
-// 用法：node test/save-modes.js [url]   截图到 shots/wechat3/（可用 SP_SHOTS 改目录），导出的图供 scripts/qr-decode.py 解码
+//  (a) iPhone 微信内置浏览器 → 弹窗是 JPEG dataURL 的 <img>、唯一提示「长按保存图片」、没有「保存图片」按钮、不下载、不产生 blob: 地址、从不弹 toast；
+//      「分享」按功能检测：canShare({files}) 为真 → 显示并调用 share（带 PNG File）；否则隐藏；share 被拒（任何错误）都不弹 toast
+//  (a2) 安卓 Chrome → 同微信：没有「保存图片」、不下载、提示「长按保存图片」、「分享」仅在 canShare 时显示
+//  (b) iOS Safari（桩 navigator.share/canShare）→ 「保存图片」调用 share 且带一个 PNG File、不下载；无 canShare 时隐藏「保存图片」、只提示长按
+//  (c) 桌面 Chrome → 触发真实下载、不显示长按提示
+// 用法：node test/save-modes.js [url]   截图到 shots/save-modes/（可用 SP_SHOTS 改目录），导出的图供 scripts/qr-decode.py 解码
 const { chromium } = require('playwright-core'); const fs = require('fs');
 const { launch, fileUrl, shotsDir } = require('./env');
-const URL = process.argv[2] || fileUrl('dist/index.html'), OUT = shotsDir(process.env.SP_SHOTS || 'wechat3');
+const URL = process.argv[2] || fileUrl('dist/index.html'), OUT = shotsDir(process.env.SP_SHOTS || 'save-modes');
 const UA = {
   wechat: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003133) NetType/WIFI Language/zh_CN',
+  android: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36',
   safari: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
   desktop: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
 };
@@ -49,7 +50,12 @@ async function toModal(p){
   await p.click('#shareBtn'); await p.waitForSelector('#shareModal.open');
   await p.waitForFunction(() => { const i = document.getElementById('posterImg'); return i.src && i.complete && i.naturalWidth > 0 }, null, { timeout: 15000 });
   await p.waitForTimeout(400);
+  // 记录弹窗打开后 toast 是否出现过（任何一次 show 都算）
+  await p.evaluate(() => { window.__toastEver = false; const t = document.getElementById('toast');
+    new MutationObserver(() => { if (t.classList.contains('show')) window.__toastEver = true }).observe(t, { attributes: true, attributeFilter: ['class'] }) });
 }
+const toastEver = p => p.evaluate(() => window.__toastEver || document.getElementById('toast').classList.contains('show'));
+const HINT = '长按保存图片';
 const vis = (p, sel) => p.$eval(sel, e => !e.hidden && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().height > 0);
 const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#posterImg', 'src'); fs.writeFileSync(file, Buffer.from(src.split(',')[1], 'base64')); return src };
 
@@ -108,23 +114,21 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
       return r });
     ok(Object.entries(pd).every(([k, v]) => k === 'outsidePinchBlocked' ? v === true : v === false), `events on preview img not prevented ${JSON.stringify(pd)}`);
     ok(await vis(p, '#posterImg'), 'preview image visible');
-    const tip = await p.textContent('#shareTip');
-    ok(tip.includes('长按图片保存到相册') && tip.includes('分享') && await vis(p, '#shareTip'), `hint visible (mentions 分享): 「${tip}」`);
-    const tip2 = await p.textContent('#shareTip2');
-    ok(tip2.includes('若长按无反应，可截图保存') && await vis(p, '#shareTip2'), `secondary hint visible: 「${tip2}」`);
+    const tip = (await p.textContent('#shareTip')).trim();
+    ok(tip === HINT && await vis(p, '#shareTip'), `single hint exactly 「${tip}」`);
+    ok(await p.$('#shareTip2') === null && await p.$$eval('.modal .tip, .modal .tip2', es => es.filter(e => !e.hidden && e.getBoundingClientRect().height > 0).length) === 1, 'only one hint line in modal');
+    ok(!(await vis(p, '#saveBtn')), '「保存图片」 hidden in WeChat');
     ok(await vis(p, '#nativeShareBtn') && !(await p.$eval('#nativeShareBtn', e => e.disabled)), '「分享」 visible & enabled in WeChat when canShare({files}) is true');
     const press = await p.evaluate(() => { const i = document.getElementById('posterImg'), r = i.getBoundingClientRect(), cs = getComputedStyle(i);
       const top = document.elementFromPoint(r.left + r.width / 2, Math.min(r.top + r.height / 2, innerHeight / 2));
       return { pe: cs.pointerEvents, callout: cs.webkitTouchCallout || '(n/a)', us: cs.userSelect || cs.webkitUserSelect, topIsImg: top === i, drag: i.draggable } });
     ok(press.pe !== 'none' && press.topIsImg && press.us !== 'none' && press.callout !== 'none', `image long-pressable ${JSON.stringify(press)}`);
     await p.screenshot({ path: OUT + 'modal.png' });
-    // 点「保存图片」：不下载、闪提示
     const href = await p.getAttribute('#saveBtn', 'href'), dlAttr = await p.getAttribute('#saveBtn', 'download');
-    ok(href === null && dlAttr === null, `保存图片 has no href/download (href=${href}, download=${dlAttr})`);
-    await p.tap('#saveBtn'); await p.waitForTimeout(1500);
-    ok(downloads.length === 0, `no download event (${downloads.length})`);
-    ok(await p.$eval('#toast', e => e.classList.contains('show') && /长按/.test(e.textContent)), 'tap 保存图片 -> long-press hint toast');
-    ok(await p.evaluate(() => window.__shareCalls.length) === 0, '保存图片 does not call navigator.share in WeChat');
+    ok(href === null && dlAttr === null, `(hidden) 保存图片 has no href/download (href=${href}, download=${dlAttr})`);
+    // 长按 / 点图片：不弹 toast、不下载
+    await p.tap('#posterImg'); await p.waitForTimeout(600);
+    ok(await p.evaluate(() => window.__shareCalls.length) === 0, 'share not called before 分享 is tapped');
     // 点「分享」：在点击处理里同步调用 navigator.share，带一个 PNG File；不下载
     const n = await p.evaluate(() => { document.getElementById('nativeShareBtn').click(); return window.__shareCalls.length });
     ok(n === 1, `分享 -> navigator.share called synchronously in click (${n})`);
@@ -132,6 +136,7 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
     ok(c && c.n === 1 && c.isFile && c.type === 'image/png' && /\.png$/.test(c.name) && c.size > 10000, `share got one PNG File ${JSON.stringify(c)}`);
     await p.waitForTimeout(800);
     ok(downloads.length === 0, 'no download after 分享');
+    ok(!(await toastEver(p)), 'no toast shown after any click');
     const blob = await p.evaluate(() => ({ created: window.__blobUrls.length,
       // DOM 里（去掉内联脚本源码后）是否出现 blob:；以及是否加载过 blob: 资源
       inDom: (() => { const d = document.documentElement.cloneNode(true); d.querySelectorAll('script').forEach(s => s.remove()); return /blob:(https?:|null\/|file:)/.test(d.outerHTML) })(), // 真正的 blob 地址形如 blob:<origin>/<uuid>（CSS 变量 --blob: 不算）
@@ -151,12 +156,12 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
     const { ctx, p, errs, downloads } = await open(b, { ua: UA.wechat, mobile: true, share: false });
     await toModal(p);
     ok(/^data:image\/jpeg;base64,/.test(await p.getAttribute('#posterImg', 'src')), 'no-share: preview still JPEG data: URL');
-    ok(!(await vis(p, '#nativeShareBtn')), 'no-share: 「分享」 hidden');
-    const tip = await p.textContent('#shareTip');
-    ok(tip.includes('长按图片保存到相册') && !tip.includes('分享') && await vis(p, '#shareTip') && await vis(p, '#shareTip2'), `no-share: long-press hints visible 「${tip}」`);
+    ok(!(await vis(p, '#nativeShareBtn')) && !(await vis(p, '#saveBtn')), 'no-share: 「分享」 and 「保存图片」 both hidden');
+    const tip = (await p.textContent('#shareTip')).trim();
+    ok(tip === HINT && await vis(p, '#shareTip'), `no-share: single hint exactly 「${tip}」`);
     await p.screenshot({ path: OUT + 'modal-noshare.png' });
-    await p.tap('#saveBtn'); await p.waitForTimeout(1200);
-    ok(downloads.length === 0 && await p.$eval('#toast', e => e.classList.contains('show') && /长按/.test(e.textContent)), 'no-share: 保存图片 -> long-press toast, no download');
+    await p.tap('#posterImg'); await p.waitForTimeout(800);
+    ok(downloads.length === 0 && !(await toastEver(p)), 'no-share: no download, no toast');
     ok(await p.evaluate(() => window.__blobUrls.length) === 0, 'no-share: no blob: URL created');
     ok(errs.length === 0, 'no-share: no console errors ' + errs.join(' | '));
     await ctx.close();
@@ -167,13 +172,13 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
     ok(!(await vis(p, '#nativeShareBtn')), 'canShare({files}) false: 「分享」 hidden');
     await ctx.close();
   }
-  { // share 被拒：AbortError（用户取消）静默；其它错误 → 长按提示
-    for (const [err, expectToast] of [['AbortError', false], ['NotAllowedError', true]]) {
+  { // share 被拒：AbortError（用户取消）和其它错误都不弹 toast（提示「长按保存图片」一直可见）
+    for (const [err, expectToast] of [['AbortError', false], ['NotAllowedError', false]]) {
       const { ctx, p, downloads } = await open(b, { ua: UA.wechat, mobile: true, share: true, shareErr: err });
       await toModal(p);
       await p.evaluate(() => document.getElementById('nativeShareBtn').click()); await p.waitForTimeout(600);
-      const t = await p.$eval('#toast', e => e.classList.contains('show') ? e.textContent : '');
-      ok(expectToast ? /长按/.test(t) : t === '', `share rejects ${err} -> ${expectToast ? 'long-press toast' : 'silent'} 「${t}」`);
+      const t = await toastEver(p);
+      ok(t === expectToast && (await p.textContent('#shareTip')).trim() === HINT, `share rejects ${err} -> no toast, hint still 「${HINT}」`);
       ok(downloads.length === 0, `share rejects ${err} -> no download`);
       await ctx.close();
     }
@@ -185,13 +190,41 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
     await ctx.close();
   }
 
+  // ---------- (a2) 安卓 Chrome ----------
+  console.log('== (a2) Android Chrome');
+  for (const share of [true, false]) {
+    const tag = share ? 'android+share' : 'android no-share';
+    const { ctx, p, errs, downloads } = await open(b, { ua: UA.android, mobile: true, share, vp: { width: 412, height: 915 } });
+    ok(await p.evaluate(() => document.documentElement.dataset.save) === 'longpress', `${tag}: save mode = longpress (no download)`);
+    await toModal(p);
+    ok(/^data:image\/jpeg;base64,/.test(await p.getAttribute('#posterImg', 'src')), `${tag}: preview is JPEG data: URL`);
+    ok(!(await vis(p, '#saveBtn')) && await p.getAttribute('#saveBtn', 'href') === null, `${tag}: 「保存图片」 hidden, no href`);
+    ok((await vis(p, '#nativeShareBtn')) === share, `${tag}: 「分享」 ${share ? 'visible' : 'hidden'}`);
+    const tip = (await p.textContent('#shareTip')).trim();
+    ok(tip === HINT && await vis(p, '#shareTip'), `${tag}: hint exactly 「${tip}」`);
+    if (share) {
+      const n = await p.evaluate(() => { document.getElementById('nativeShareBtn').click(); return window.__shareCalls.length });
+      const c = await p.evaluate(() => window.__shareCalls[0]);
+      ok(n === 1 && c && c.isFile && c.type === 'image/png', `${tag}: 分享 -> share(PNG File) synchronously`);
+    }
+    await p.tap('#posterImg'); await p.waitForTimeout(800);
+    ok(downloads.length === 0, `${tag}: no download`);
+    ok(await p.evaluate(() => window.__blobUrls.length) === 0, `${tag}: no blob: URL`);
+    ok(!(await toastEver(p)), `${tag}: no toast`);
+    if (share) await p.screenshot({ path: OUT + 'android-modal.png' });
+    ok(errs.length === 0, `${tag}: no console errors ` + errs.join(' | '));
+    await ctx.close();
+  }
+
   // ---------- (b) iOS Safari ----------
   console.log('== (b) iOS Safari');
   { const { ctx, p, errs, downloads } = await open(b, { ua: UA.safari, mobile: true, share: true });
     ok(await p.evaluate(() => document.documentElement.dataset.save) === 'ios', 'detected save mode = ios');
     await toModal(p);
     ok(/^data:image\//.test(await p.getAttribute('#posterImg', 'src')), 'preview <img> src is a data: URL');
-    ok(!(await vis(p, '#shareTip2')), 'secondary screenshot hint only in WeChat-type browsers');
+    ok((await p.textContent('#shareTip')).trim() === HINT && await vis(p, '#shareTip') && await p.$('#shareTip2') === null, `iOS: single hint 「${HINT}」`);
+    ok(await vis(p, '#saveBtn') && await vis(p, '#nativeShareBtn'), 'iOS + canShare: 「分享」 and 「保存图片」 visible');
+    await p.screenshot({ path: OUT + 'safari-modal.png' });
     ok(await p.getAttribute('#saveBtn', 'href') === null, '保存图片 is not a download link');
     const n = await p.evaluate(() => { document.getElementById('saveBtn').click(); return window.__shareCalls.length });
     ok(n === 1, `保存图片 -> navigator.share called synchronously (${n})`);
@@ -204,8 +237,10 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
     await ctx.close(); }
   { const { ctx, p, downloads } = await open(b, { ua: UA.safari, mobile: true, share: false });
     await toModal(p);
-    await p.tap('#saveBtn'); await p.waitForTimeout(1200);
-    ok(downloads.length === 0 && await p.$eval('#toast', e => e.classList.contains('show') && /长按/.test(e.textContent)), 'iOS without canShare: 保存图片 -> long-press hint, no download');
+    ok(!(await vis(p, '#saveBtn')) && !(await vis(p, '#nativeShareBtn')), 'iOS without canShare: 「保存图片」 and 「分享」 hidden');
+    ok((await p.textContent('#shareTip')).trim() === HINT && await vis(p, '#shareTip'), `iOS without canShare: hint 「${HINT}」`);
+    await p.tap('#posterImg'); await p.waitForTimeout(800);
+    ok(downloads.length === 0 && !(await toastEver(p)), 'iOS without canShare: no download, no toast');
     await ctx.close(); }
 
   // ---------- (c) 桌面 Chrome ----------
@@ -213,6 +248,7 @@ const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#post
   { const { ctx, p, errs } = await open(b, { ua: UA.desktop, mobile: false, share: false, vp: { width: 1280, height: 900 } });
     ok(await p.evaluate(() => document.documentElement.dataset.save) === 'download', 'detected save mode = download');
     await toModal(p);
+    ok(!(await vis(p, '#shareTip')), 'desktop: no long-press hint line');
     const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 10000 }), p.click('#saveBtn')]);
     const path = OUT + 'desktop-download.png'; await dl.saveAs(path);
     ok(/\.png$/.test(dl.suggestedFilename()) && fs.statSync(path).size > 10000, `download event: ${dl.suggestedFilename()} ${fs.statSync(path).size}B`);

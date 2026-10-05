@@ -535,21 +535,19 @@
 
   /* ---------- 保存方式（按浏览器环境） ----------
      UA 只决定「保存图片」能不能下载；「分享」按钮一律按功能检测（navigator.canShare({files:[PNG File]})）显示，微信里也一样。
-     longpress：微信等 App 内置浏览器（含 iOS 上的非 Safari WebView）——不下载（下载只会变成「文件」），「保存图片」提示长按
-     ios：iOS Safari / iOS Chrome 等——不用下载；能分享文件就调系统分享（可选「存储图像」），否则长按
-     download：桌面、安卓浏览器——a[download] 下载 */
+     longpress：微信等 App 内置浏览器（含 iOS 上的非 Safari WebView）和所有安卓浏览器——不下载（微信里会变成「文件」，安卓会进「下载」而不是相册），
+                不显示「保存图片」；只有「分享」（支持时）+ 提示「长按保存图片」
+     ios：iOS Safari / iOS Chrome 等——不用下载；能分享文件时「保存图片」调系统分享（可选「存储图像」），否则隐藏它，只提示长按
+     download：桌面浏览器——a[download] 下载，不显示长按提示 */
   var UA = navigator.userAgent || '';
   var IS_IOS = /iP(hone|od|ad)/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var IN_APP = /MicroMessenger|WeChat|FBAN|FBAV|FB_IAB|Instagram|Line\/|\bQQ\/|MQQBrowser|Weibo|DingTalk|Lark|Feishu|AlipayClient|Twitter|LinkedInApp|Snapchat|BytedanceWebview|aweme|NewsArticle|baiduboxapp|XiaoHongShu/i.test(UA)
             || (IS_IOS && !/Safari\//.test(UA));
-  var SAVE_MODE = IN_APP ? 'longpress' : (IS_IOS ? 'ios' : 'download');
+  var IS_ANDROID = /Android/i.test(UA);
+  var SAVE_MODE = (IN_APP || IS_ANDROID) ? 'longpress' : (IS_IOS ? 'ios' : 'download');
   document.documentElement.setAttribute('data-save', SAVE_MODE);
-  var TIP = {
-    longpress: '长按图片保存到相册',
-    ios: '长按图片保存到相册；或点「保存图片」，在分享面板里选「存储图像」',
-    download: '长按图片可保存到相册，或直接发送给朋友'
-  };
-  var TIP_SHARE = '长按图片保存到相册，或点「分享」';
+  // 弹窗里唯一的一行提示（手机上显示；桌面下载模式不显示）
+  var TIP = '长按保存图片';
 
   // 结果图：弹窗里的 <img> 一律用 dataURL（各环境都能长按保存，也不产生 blob: 地址）；
   // File 只用于 navigator.share（打开弹窗时预生成，点击时才能同步调用 share）；blob: 下载地址只在 download 模式下按需创建
@@ -601,28 +599,24 @@
   function setShareButtons(p){
     var can = !!p && canShareFile(p.file), sb = $('nativeShareBtn'), sv = $('saveBtn');
     sb.hidden = !can; sb.disabled = !p;
-    sv.classList.toggle('ghost', can);
-    if(p) $('shareTip').textContent = (SAVE_MODE === 'longpress' && can) ? TIP_SHARE : TIP[SAVE_MODE];
+    // 「保存图片」：只有桌面（下载）和能分享文件的 iOS 才显示；微信等内置浏览器 / 安卓 / 不能分享的 iOS 一律隐藏
+    sv.hidden = SAVE_MODE === 'longpress' || (SAVE_MODE === 'ios' && !!p && !can);
+    sv.classList.toggle('ghost', can && !sv.hidden);
+    $('shareRow').hidden = sb.hidden && sv.hidden;
     // 只有 download 模式才是真正的下载链接；其它模式去掉 href/download，点了不会触发下载
     if(SAVE_MODE === 'download' && p && p.dl){ sv.setAttribute('href', p.dl); sv.setAttribute('download', '苏格拉底还是猪-测试结果.png') }
     else { sv.removeAttribute('href'); sv.removeAttribute('download'); sv.setAttribute('role', 'button'); sv.setAttribute('tabindex', '0') }
   }
-  function flashHint(){
-    var t = $('shareTip'); t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash');
-    toast(SAVE_MODE === 'longpress' ? '请长按上方图片，选择「保存图片」' : '请长按上方图片，选择「存储到“照片”」');
-  }
   // 「分享」：必须在点击处理里同步调用 navigator.share（iOS Safari 需要用户激活），PNG 已在打开弹窗前/时预生成
   function onNativeShare(){
-    if(!poster || !canShareFile(poster.file)){ flashHint(); return }
+    if(!poster || !canShareFile(poster.file)) return; // 按钮只在支持时显示；提示「长按保存图片」本来就在
     var pr;
     try{ pr = shareNative(poster) }catch(e){ shareFail(e); return }
     if(pr && pr.catch) pr.catch(shareFail);
   }
   function shareFail(e){
     if(e && e.name==='AbortError') return; // 用户取消，静默
-    console.warn('share', e);
-    var t = $('shareTip'); t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash');
-    toast(SAVE_MODE === 'download' ? '分享没成功，请长按图片保存，或点「保存图片」' : '分享没成功，请长按图片保存到相册');
+    console.warn('share', e); // 其它错误：不弹提示、不遮按钮（手机上「长按保存图片」一直可见）
   }
   var lastFocus = null;
   function openModal(){
@@ -630,7 +624,8 @@
     lastFocus = document.activeElement;
     img.removeAttribute('src'); img.classList.add('loading');
     setShareButtons(null); $('nativeShareBtn').hidden = !(navigator.share && navigator.canShare);
-    $('shareTip').textContent = TIP[SAVE_MODE]; $('shareTip2').hidden = SAVE_MODE !== 'longpress';
+    $('saveBtn').hidden = SAVE_MODE === 'longpress' || (SAVE_MODE === 'ios' && !(navigator.share && navigator.canShare)); $('shareRow').hidden = $('nativeShareBtn').hidden && $('saveBtn').hidden;
+    $('shareTip').textContent = TIP; $('shareTip').hidden = SAVE_MODE === 'download';
     img.draggable = false; img.setAttribute('draggable', 'false');
     m.classList.add('open'); $('closeShare').focus();
     hset('result', true, true);
@@ -639,7 +634,7 @@
       img.onload = function(){ if(img.naturalWidth) img.style.aspectRatio = img.naturalWidth + ' / ' + img.naturalHeight };
       img.src = p.url; img.classList.remove('loading');
       setShareButtons(p);
-    }).catch(function(err){ console.warn(err); toast('结果图生成失败，请直接截图'); closeShare() });
+    }).catch(function(err){ console.warn(err); toast('结果图生成失败，请截图'); closeShare() });
   }
   function closeShare(noHist){
     var m = $('shareModal'); if(!m.classList.contains('open')) return;
@@ -649,11 +644,10 @@
   }
   $('saveBtn').addEventListener('click', function(e){
     if(!poster){ e.preventDefault(); return }
-    if(SAVE_MODE === 'download'){ toast('已开始保存；若无反应，请长按图片保存'); return }
+    if(SAVE_MODE === 'download') return; // 浏览器自己会显示下载
     e.preventDefault();
-    // iOS Safari：调系统分享（必须在点击里同步调用），用户可选「存储图像」；不支持就提示长按
-    if(SAVE_MODE === 'ios' && canShareFile(poster.file)){ var pr; try{ pr = shareNative(poster) }catch(err){ shareFail(err); return } if(pr && pr.catch) pr.catch(shareFail); return }
-    flashHint();
+    // iOS Safari：调系统分享（必须在点击里同步调用），用户可选「存储图像」；不支持时按钮本来就隐藏
+    if(SAVE_MODE === 'ios' && canShareFile(poster.file)){ var pr; try{ pr = shareNative(poster) }catch(err){ shareFail(err); return } if(pr && pr.catch) pr.catch(shareFail) }
   });
   $('saveBtn').addEventListener('keydown', function(e){ if((e.key === 'Enter' || e.key === ' ') && !this.hasAttribute('href')){ e.preventDefault(); this.click() } });
 
