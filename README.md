@@ -24,7 +24,7 @@
 - **维度图**：自绘 SVG 象限图（渐变象限、同心网格、刻度、呼吸光点、从「现在」指向「想成为」的虚线弧箭头、图例），可切换 4 轴雷达图（思考 / 享受 / 痛苦 / 快乐）；完整版答题时，顶栏的迷你象限会实时显示当前位置
 - **成长建议**：16 组内容——12 种 X → Y 的转变路径 + 4 种「保持现状」的健康建议，每组 3–4 条
 - **结果图分享**：canvas 绘制 1080 宽高清长图（含象限图、现在/想成为、建议；完整版另含两轴得分）。点「生成结果图」总是先打开预览弹窗。**所有浏览器（微信等 App 内置浏览器、安卓、iOS Safari、桌面）看到的弹窗完全一样，以微信为准**，不按 UA 区分：
-  - 结果图是 JPEG dataURL 的 `<img>`（质量 0.88，超过 800 KB 会依次缩到 900 / 750 宽），手机长按、桌面右键「图片另存为」都能保存；下面只有一行提示「长按保存图片」，不弹 toast、不闪烁
+  - 结果图是 JPEG dataURL 的 `<img>`（质量 0.88，超过 800 KB 会依次缩到 900 / 750 宽），手机长按、桌面右键「图片另存为」都能保存；下面只有一行提示，不弹 toast、不闪烁。提示按输入能力决定（不看 UA）：电脑（`matchMedia('(hover: hover) and (pointer: fine)')` 成立且 `navigator.maxTouchPoints === 0`）显示「右键保存图片」，其它（手机、平板，包括接了触控板 / 妙控键盘、maxTouchPoints 为 5 的 iPad）显示「长按保存图片」；加载时设定，输入方式变化时更新
   - 「分享」按钮只按功能检测显示：打开弹窗时先生成 PNG File，`navigator.canShare({files:[file]})` 为真才显示，点击调用 `navigator.share`（带这个 PNG）；用户取消或其它错误都不弹提示。不支持就没有按钮
   - 没有「保存图片」按钮，也没有任何下载（不用 a[download]、不产生 blob: 地址）：微信里下载只会变成「文件」，安卓会进「下载」而不是相册。图片设为 `draggable=false`、`-webkit-user-drag:none`、`-webkit-touch-callout:default`；图片和外层容器都不加 transform / filter / 动画 / backdrop-filter，预览区里的触摸事件也不调用 `preventDefault`，免得 iPhone 微信长按变成拖动图片、不弹保存菜单
   - 系统分享在点击里同步调用 `navigator.share`（PNG File 打开弹窗时就已生成），满足 iOS 的用户手势要求。结果图上下各留一段背景（上 ≈ 0.174×宽、下 ≈ 0.256×宽），在刘海 / 灵动岛 iPhone 上全屏查看时，内容不会被状态栏和 Home 指示条挡住
@@ -127,7 +127,7 @@ CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm t
 - `test/themes.js [index|1-dark|…]`：走完整版和速通版，检查四个象限都能到达、「想成为」文案、建议条数、维度图坐标、分享弹窗、返回 / 回首页 / 浏览器后退、确认弹窗、控制台无报错
 - `test/share.js`：各象限、相同/不同愿望、A 或 B 正好为 0、速通版共 10 种场景的结果图，以及弹窗中图片不被拉伸、防缩放是否生效
 - `test/share-flow.js`：用桩模拟 `navigator.share` / `canShare`，验证点「生成结果图」只开弹窗不分享、点「分享」同步调用一次且带一个 PNG 文件、取消和出错都不弹提示、没有「保存图片」、无文件分享时没有按钮只有提示，并在 390×844 和 375×667 下截图
-- `test/save-modes.js [url]`：iPhone 微信、安卓 Chrome、iOS Safari、桌面 Chrome 各自在「有 / 没有 `canShare` 文件分享」（桩）下打开弹窗，逐项检查：预览图是 JPEG dataURL（小于约 1.1M 字符）且不可拖拽、DOM 里没有「保存图片」和下载链接、唯一提示正好是「长按保存图片」、「分享」仅在 canShare 时显示且点击会同步调用 share 并带一个 PNG 文件、右键 / 长按（contextmenu）不被拦截、不下载、没有 blob: 地址、没有 toast；8 种组合的弹窗 DOM 必须完全相同。微信下还检查：图片及容器没有 transform 等、页面 CSS 没有 `touch-callout:none` 且图片和容器明确为 default、全站正文 `user-select:none` 而 input/textarea 为 `text`、预览图上的 touch/gesture/dblclick 等事件没被 preventDefault；share 被拒（AbortError 或其它错误）都不弹提示。截图输出到 `shots/save-modes/`（`wechat-share.png`、`wechat-noshare.png`、`desktop.png` 等；用环境变量 `SP_SHOTS` 可以换目录），可以传线上地址测线上
+- `test/save-modes.js [url]`：iPhone 微信、安卓 Chrome、iOS Safari、iPad、iPad + 触控板（有悬停和精确指针、maxTouchPoints 为 5）、桌面 Chrome 各自在「有 / 没有 `canShare` 文件分享」（桩）下打开弹窗，逐项检查：预览图是 JPEG dataURL（小于约 1.1M 字符）且不可拖拽、DOM 里没有「保存图片」和下载链接、唯一提示正好是「长按保存图片」（桌面为「右键保存图片」）、「分享」仅在 canShare 时显示且点击会同步调用 share 并带一个 PNG 文件、右键 / 长按（contextmenu）不被拦截、不下载、没有 blob: 地址、没有 toast；12 种组合的弹窗 DOM 必须完全相同（只允许提示文字不同）。微信下还检查：图片及容器没有 transform 等、页面 CSS 没有 `touch-callout:none` 且图片和容器明确为 default、全站正文 `user-select:none` 而 input/textarea 为 `text`、预览图上的 touch/gesture/dblclick 等事件没被 preventDefault；share 被拒（AbortError 或其它错误）都不弹提示。截图输出到 `shots/save-modes/`（`wechat.png`、`wechat-noshare.png`、`desktop.png` 等；用环境变量 `SP_SHOTS` 可以换目录），可以传线上地址测线上
 - `test/colorscheme.js`：分别在浅色、深色、Chrome 强制深色下渲染，截图必须逐字节一致
 - `test/preview-badge.js [预览地址]`：用 Playwright 路由把同一份 `dist/index.html` 挂到正式域名和预览域名上，正式域名下「预览版」必须隐藏，`preview.socrates-pig.pages.dev`、localhost、本地文件下必须显示，并且不挡点击、不压 GitHub 角标；传真实预览地址时额外检查并截图到 `shots/preview/cover.png`
 

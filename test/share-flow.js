@@ -1,4 +1,4 @@
-// 分享流程：「生成结果图」总是先开预览弹窗；弹窗内「分享」按钮同步调用 navigator.share；不支持时没有按钮，只有提示「长按保存图片」
+// 分享流程：「生成结果图」总是先开预览弹窗；弹窗内「分享」按钮同步调用 navigator.share；不支持时没有按钮，只有提示（手机为「长按保存图片」）
 // 另含：返回手势关弹窗、GitHub 角标隐藏、390x844 / 375x667 弹窗与结果页截图
 const { chromium } = require('playwright-core');
 const { launch, fileUrl, shotsDir } = require('./env');

@@ -534,9 +534,15 @@
   };
 
   /* ---------- 结果图弹窗（所有浏览器完全一样，以微信为准） ----------
-     结果图 <img>（JPEG dataURL）+ 一行提示「长按保存图片」+「分享」（仅当 navigator.canShare({files:[PNG File]}) 为真时显示）。
-     没有「保存图片」按钮、没有下载（a[download] / blob:），也不按 UA 区分；桌面上右键图片「图片另存为」即可。 */
-  var TIP = '长按保存图片';
+     结果图 <img>（JPEG dataURL）+ 一行提示 +「分享」（仅当 navigator.canShare({files:[PNG File]}) 为真时显示）。
+     没有「保存图片」按钮、没有下载（a[download] / blob:），也不按 UA 区分。
+     提示文字按输入能力（不看 UA）：电脑（能悬停 + 精确指针 + 没有触摸点）→「右键保存图片」；
+     其它（手机、平板，包括接了触控板 / 妙控键盘、maxTouchPoints 为 5 的 iPad）→「长按保存图片」。 */
+  var HOVER_MQ = window.matchMedia ? window.matchMedia('(hover: hover) and (pointer: fine)') : null;
+  function isComputer(){ return !!(HOVER_MQ && HOVER_MQ.matches) && (navigator.maxTouchPoints || 0) === 0 }
+  function setTip(){ $('shareTip').textContent = isComputer() ? '右键保存图片' : '长按保存图片' }
+  setTip(); // 加载时设一次；输入方式变化（如外接鼠标）时更新
+  if(HOVER_MQ){ if(HOVER_MQ.addEventListener) HOVER_MQ.addEventListener('change', setTip); else if(HOVER_MQ.addListener) HOVER_MQ.addListener(setTip) }
 
   // 预览图：JPEG + 必要时缩小，控制 dataURL 体积（微信 iOS 对超大 base64 图片可能不给长按保存菜单）。
   // 目标 < 800KB；最窄 750px（二维码模块仍 ≥ 5.5px，实测 zxing 与微信识别引擎都能解出）
@@ -601,7 +607,6 @@
     lastFocus = document.activeElement;
     img.removeAttribute('src'); img.classList.add('loading');
     setShareButton(null);
-    $('shareTip').textContent = TIP;
     img.draggable = false; img.setAttribute('draggable', 'false');
     m.classList.add('open'); $('closeShare').focus();
     hset('result', true, true);

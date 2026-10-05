@@ -1,6 +1,8 @@
 // 结果图弹窗：所有浏览器完全一样（以微信为准）——
-//   JPEG dataURL 的 <img> + 唯一提示「长按保存图片」+「分享」（仅当 canShare({files}) 为真）；没有「保存图片」、不下载、不产生 blob:、从不弹 toast。
-// 矩阵：iPhone 微信 / 安卓 Chrome / iOS Safari / 桌面 Chrome × canShare 有/无，逐项检查，并比较弹窗 DOM 在各浏览器下完全相同。
+//   JPEG dataURL 的 <img> + 唯一一行提示 +「分享」（仅当 canShare({files}) 为真）；没有「保存图片」、不下载、不产生 blob:、从不弹 toast。
+//   提示按输入能力：电脑（hover:hover + pointer:fine + maxTouchPoints 0）→「右键保存图片」，其它（手机、平板，含带触控板的 iPad）→「长按保存图片」。
+// 矩阵：iPhone 微信 / 安卓 Chrome / iOS Safari / iPad / iPad+触控板（精确指针、maxTouchPoints 5）/ 桌面 Chrome × canShare 有/无，
+//   逐项检查，并比较弹窗 DOM 在各浏览器下完全相同（只允许提示文字不同）。
 // 另含：微信下长按相关样式与事件检查、share 被拒（AbortError / 其它错误）不弹提示、375x667 排版、页脚截图。
 // 用法：node test/save-modes.js [url]   截图到 shots/save-modes/（可用 SP_SHOTS 改目录）；wechat-preview.jpg 供 scripts/qr-decode.py 解码
 const { chromium } = require('playwright-core'); const fs = require('fs');
@@ -10,15 +12,20 @@ const UA = {
   wechat: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.49(0x18003133) NetType/WIFI Language/zh_CN',
   android: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36',
   safari: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+  ipad: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
   desktop: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
 };
 const ENV = {
   wechat:  { ua: UA.wechat,  mobile: true,  vp: { width: 390, height: 844 } },
   android: { ua: UA.android, mobile: true,  vp: { width: 412, height: 915 } },
   safari:  { ua: UA.safari,  mobile: true,  vp: { width: 390, height: 844 } },
+  ipad:    { ua: UA.ipad,    mobile: true,  vp: { width: 820, height: 1180 } },
+  // iPad 接触控板 / 妙控键盘：有悬停和精确指针，但 maxTouchPoints 为 5 → 仍按平板处理
+  ipadPointer: { ua: UA.ipad, mobile: false, touchPoints: 5, vp: { width: 1180, height: 820 } },
   desktop: { ua: UA.desktop, mobile: false, vp: { width: 1280, height: 900 } },
 };
-const HINT = '长按保存图片';
+const LONG = '长按保存图片', RIGHT = '右键保存图片', HINT = LONG;
+const hintFor = name => name === 'desktop' ? RIGHT : LONG;
 let fails = 0; const ok = (c, m) => { console.log((c ? '  ok   ' : '  FAIL ') + m); if (!c) fails++ };
 
 // 页面脚本之前注入：记录 createObjectURL 调用；可选地装上 share/canShare 桩
@@ -27,6 +34,7 @@ function init(opt){
   const orig = URL.createObjectURL.bind(URL);
   URL.createObjectURL = o => { const u = orig(o); window.__blobUrls.push(u); return u };
   window.__shareCalls = [];
+  if (opt.touchPoints != null) Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { configurable: true, get: () => opt.touchPoints });
   if (opt.share) {
     // opt.shareErr：share 以该名字的 DOMException 拒绝
     Object.defineProperty(Navigator.prototype, 'canShare', { configurable: true, value: d => !!(d && d.files && d.files.length && d.files.every(f => f instanceof File)) });
@@ -38,9 +46,9 @@ function init(opt){
   }
 }
 
-async function open(b, { ua, mobile, share, shareErr = null, vp }){
+async function open(b, { ua, mobile, share, shareErr = null, touchPoints = null, vp }){
   const ctx = await b.newContext({ viewport: vp, deviceScaleFactor: mobile ? 3 : 1, isMobile: mobile, hasTouch: mobile, userAgent: ua, reducedMotion: 'reduce', acceptDownloads: true });
-  await ctx.addInitScript(init, { share, shareErr });
+  await ctx.addInitScript(init, { share, shareErr, touchPoints });
   const p = await ctx.newPage(); const errs = [], downloads = [];
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()) });
   p.on('download', d => downloads.push(d));
@@ -61,9 +69,10 @@ async function toModal(p){
 const vis = (p, sel) => p.$eval(sel, e => !e.hidden && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().height > 0);
 const toastEver = p => p.evaluate(() => window.__toastEver || document.getElementById('toast').classList.contains('show'));
 const saveDataUrl = async (p, file) => { const src = await p.getAttribute('#posterImg', 'src'); fs.writeFileSync(file, Buffer.from(src.split(',')[1], 'base64')); return src };
-// 弹窗 DOM（去掉图片 src、行内 aspect-ratio 和 hidden/disabled 状态）——各浏览器必须完全一致
+// 弹窗 DOM（去掉图片 src、行内 aspect-ratio、hidden/disabled 状态和提示文字）——各浏览器必须完全一致
 const modalMarkup = p => p.$eval('#shareModal', m => { const c = m.cloneNode(true); c.querySelectorAll('[src]').forEach(e => e.removeAttribute('src')); c.querySelectorAll('[style]').forEach(e => e.removeAttribute('style'));
-  c.querySelectorAll('[hidden],[disabled]').forEach(e => { e.removeAttribute('hidden'); e.removeAttribute('disabled') }); return c.outerHTML });
+  c.querySelectorAll('[hidden],[disabled]').forEach(e => { e.removeAttribute('hidden'); e.removeAttribute('disabled') });
+  c.querySelector('#shareTip').textContent = ''; return c.outerHTML });
 
 (async () => {
   const b = await launch(chromium);
@@ -80,8 +89,10 @@ const modalMarkup = p => p.$eval('#shareModal', m => { const c = m.cloneNode(tru
     ok(/^data:image\/jpeg;base64,/.test(src) && src.length < 1.1e6, `${tag}: preview is JPEG data: URL (${src.length} chars)`);
     ok(await p.$eval('#posterImg', i => i.draggable === false && i.getAttribute('draggable') === 'false'), `${tag}: img draggable=false`);
     ok(await p.$('#saveBtn') === null && await p.$('a[download]') === null, `${tag}: no 保存图片 button / download link in DOM`);
+    const inp = await p.evaluate(() => ({ hoverFine: matchMedia('(hover: hover) and (pointer: fine)').matches, touch: navigator.maxTouchPoints }));
+    if (name === 'ipadPointer' || name === 'desktop') ok(inp.hoverFine, `${tag}: emulation has hover + fine pointer ${JSON.stringify(inp)}`);
     const tip = (await p.textContent('#shareTip')).trim();
-    ok(tip === HINT && await vis(p, '#shareTip'), `${tag}: hint exactly 「${tip}」`);
+    ok(tip === hintFor(name) && await vis(p, '#shareTip'), `${tag}: hint exactly 「${tip}」 (expected 「${hintFor(name)}」) ${JSON.stringify(inp)}`);
     ok(await p.$$eval('.modal .tip', es => es.filter(e => !e.hidden && e.getBoundingClientRect().height > 0).length) === 1, `${tag}: one hint line`);
     ok((await vis(p, '#nativeShareBtn')) === share, `${tag}: 「分享」 ${share ? 'visible' : 'hidden'}`);
     if (share) {
@@ -100,8 +111,8 @@ const modalMarkup = p => p.$eval('#shareModal', m => { const c = m.cloneNode(tru
     ok(blob.created === 0 && !blob.inDom && !blob.attrs, `${tag}: no blob: URL ${JSON.stringify(blob)}`);
     ok(!(await toastEver(p)), `${tag}: no toast`);
     markups[tag] = await modalMarkup(p);
-    if (name === 'wechat' || name === 'desktop' || (name === 'safari' && share) || (name === 'android' && share)) {
-      const shot = name === 'desktop' ? (share ? 'desktop-share.png' : 'desktop.png') : `${name}-${share ? 'share' : 'noshare'}.png`;
+    if (name === 'wechat' || name === 'desktop' || share) {
+      const shot = name === 'desktop' ? (share ? 'desktop-share.png' : 'desktop.png') : name === 'wechat' ? (share ? 'wechat.png' : 'wechat-noshare.png') : `${name}-${share ? 'share' : 'noshare'}.png`;
       await p.screenshot({ path: OUT + shot });
     }
     if (name === 'wechat' && share) {
@@ -145,7 +156,7 @@ const modalMarkup = p => p.$eval('#shareModal', m => { const c = m.cloneNode(tru
   }
   // 弹窗 DOM 在 8 种组合下完全一致
   const vals = Object.values(markups), diff = Object.keys(markups).filter(k => markups[k] !== vals[0]);
-  ok(vals.length === 8 && diff.length === 0, `identical modal markup across all UAs × canShare (${vals.length} runs${diff.length ? ', differs: ' + diff.join(', ') : ''})`);
+  ok(vals.length === Object.keys(ENV).length * 2 && diff.length === 0, `identical modal markup (except hint text) across all envs × canShare (${vals.length} runs${diff.length ? ', differs: ' + diff.join(', ') : ''})`);
 
   // ---------- share 被拒：AbortError 和其它错误都不弹提示 ----------
   console.log('== share rejected');

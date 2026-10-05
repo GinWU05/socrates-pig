@@ -68,7 +68,10 @@ async function share(page, file){
     fs.writeFileSync(file, Buffer.from(b64,'base64'));
   }
   ok(await page.$('#saveBtn') === null && await page.$('#shareModal a[download]') === null, 'no 保存图片 / download link in modal');
-  ok((await page.textContent('#shareTip')).trim() === '长按保存图片', 'hint 长按保存图片');
+  // 提示按当前输入能力：电脑（hover+fine 且无触摸点）「右键保存图片」，否则「长按保存图片」。
+  // 注意：Chromium 的 fullPage 截图会让触摸模拟失效（之后页面变成「电脑」），页面会跟着媒体查询变化更新提示，所以这里按当前能力判断。
+  { const r = await page.evaluate(() => ({ t: document.getElementById('shareTip').textContent.trim(), pc: matchMedia('(hover: hover) and (pointer: fine)').matches && navigator.maxTouchPoints === 0 }));
+    ok(r.t === (r.pc ? '右键保存图片' : '长按保存图片'), 'hint matches input capability: 「' + r.t + '」 computer=' + r.pc) }
   ok(/^data:image\/jpeg;base64,/.test(await page.getAttribute('#posterImg','src')), 'preview is JPEG data: URL');
   await page.click('#closeShare'); await page.waitForTimeout(450);
   ok(await page.$eval('#shareModal', e => !e.classList.contains('open')), 'modal closed');
